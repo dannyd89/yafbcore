@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Connector">
+      <HintPath>..\..\Releases\Connector.dll</HintPath>
+    </Reference>
+    <Reference Include="JARVIS">
+      <HintPath>..\..\Releases\JARVIS.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Flattiverse\Mapping\Units\GenerateUnits.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+    </None>
+    <None Update="Flattiverse\Mapping\Units\SaveUnit.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+    </None>
+    <None Update="Flattiverse\Messaging\Listeners\GenerateListener.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>GenerateListener.cs</LastGenOutput>
+    </None>
+    <None Update="Flattiverse\Messaging\Listeners\SaveListener.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Flattiverse\Messaging\Listeners\GenerateListener.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>GenerateListener.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+</Project>
