@@ -1,0 +1,201 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{6E479E0D-8596-4130-9E9E-DF30F942F97B}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>FlattiBase</RootNamespace>
+    <AssemblyName>FlattiBase</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_Danny|AnyCPU'">
+    <OutputPath>bin\Release_Danny\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_Stephanos|AnyCPU'">
+    <OutputPath>bin\Release_Stephanos\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_Thomas|AnyCPU'">
+    <OutputPath>bin\Release_Thomas\</OutputPath>
+    <DefineConstants>TRACE;THOMAS</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Connector">
+      <HintPath>..\..\..\Releases\Connector.dll</HintPath>
+    </Reference>
+    <Reference Include="JARVIS">
+      <HintPath>..\..\..\Releases\JARVIS.dll</HintPath>
+    </Reference>
+    <Reference Include="SharpDX">
+      <HintPath>$(SharpDXPackageBinDir)\SharpDX.dll</HintPath>
+    </Reference>
+    <Reference Include="SharpDX.Direct2D1">
+      <HintPath>$(SharpDXPackageBinDir)\SharpDX.Direct2D1.dll</HintPath>
+    </Reference>
+    <Reference Include="SharpDX.DXGI">
+      <HintPath>$(SharpDXPackageBinDir)\SharpDX.DXGI.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Brushes\SolidColorBrushes.cs" />
+    <Compile Include="Colors\AdvancedColors.cs" />
+    <Compile Include="Colors\SimpleColors.cs" />
+    <Compile Include="Commands\Command.cs" />
+    <Compile Include="Commands\MoveCommand.cs" />
+    <Compile Include="Commands\ShootCommand.cs" />
+    <Compile Include="Data\PlayerEntry.cs" />
+    <Compile Include="Fonts\FormFonts.cs" />
+    <Compile Include="Forms\Button.cs" />
+    <Compile Include="Forms\ImageBox.cs" />
+    <Compile Include="Forms\Label.cs" />
+    <Compile Include="Forms\Line.cs" />
+    <Compile Include="Forms\TableComponents\UniverseTeamTable.cs" />
+    <Compile Include="Forms\UniverseTable.cs" />
+    <Compile Include="Forms\TableComponents\Column.cs" />
+    <Compile Include="Forms\TableComponents\Row.cs" />
+    <Compile Include="Helper\BitmapConverter.cs" />
+    <Compile Include="Helper\ImageCollections.cs" />
+    <Compile Include="Helper\Log.cs" />
+    <Compile Include="Helper\LogEntry.cs" />
+    <Compile Include="Helper\Transformator.cs" />
+    <Compile Include="Interfaces\IFixedDrawable.cs" />
+    <Compile Include="Interfaces\IMouseListener.cs" />
+    <Compile Include="Interfaces\IUpdateable.cs" />
+    <Compile Include="Managers\ScreenManager.cs" />
+    <Compile Include="Mapping\Map.cs" />
+    <Compile Include="Mapping\MapRaster.cs" />
+    <Compile Include="Mapping\MapRasterizer.cs" />
+    <Compile Include="Mapping\MapRasterTile.cs" />
+    <Compile Include="Mapping\MapUnits\MapOrbitingState.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnit.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitAsteroid.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitBlackhole.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitBuoy.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitCloakPowerUp.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitDefault.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitDoubleDamagePowerUp.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitEnergyPowerUp.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitExplosion.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitFactory.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitGate.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitHastePowerUp.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitHullPowerUp.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitIonsPowerUp.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitJellyfish.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitJellyfishShot.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitKind.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitMeteoroid.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitMissionTarget.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitMobility.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitMoon.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitParticlesPowerUp.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitPlanet.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitPlayerBase.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitPlayerDrone.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitPlayerPlatform.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitPlayerProbe.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitPlayerShip.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitQuadDamagePowerUp.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitShieldPowerUp.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitShot.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitShotProductionPowerUp.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitSun.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitSwitch.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitTotalRefreshPowerUp.cs" />
+    <Compile Include="Mapping\MapUnits\MapUnitWormhole.cs" />
+    <Compile Include="Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Screens\GameScreen.cs" />
+    <Compile Include="Screens\MenuScreens\GameMenuScreen.cs" />
+    <Compile Include="Screens\MenuScreens\MenuScreen.cs" />
+    <Compile Include="Screens\Screen.cs" />
+    <Compile Include="Screens\StartScreen.cs" />
+    <Compile Include="Screens\UniverseLobbyScreen.cs" />
+    <Compile Include="Screens\UniverseOverviewCard.cs" />
+    <Compile Include="Screens\UniverseOverviewScreen.cs" />
+    <Compile Include="Ships\ShipBase.cs" />
+    <Compile Include="Simples\Arc.cs" />
+    <Compile Include="Simples\Circle.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="Resources\default.png" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>copy "$(TargetPath)" "$(SolutionDir)..\..\Releases"</PostBuildEvent>
+  </PropertyGroup>
+  <Import Project="..\packages\SharpDX.2.6.3\build\SharpDX.targets" Condition="Exists('..\packages\SharpDX.2.6.3\build\SharpDX.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\SharpDX.2.6.3\build\SharpDX.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\SharpDX.2.6.3\build\SharpDX.targets'))" />
+  </Target>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
