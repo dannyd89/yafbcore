@@ -6,16 +6,14 @@
 
   <ItemGroup>
     <Reference Include="Connector">
-      <HintPath>..\..\Releases\Connector.dll</HintPath>
-    </Reference>
-    <Reference Include="JARVIS">
-      <HintPath>..\..\Releases\JARVIS.dll</HintPath>
+      <HintPath>..\Connector.dll</HintPath>
     </Reference>
   </ItemGroup>
 
   <ItemGroup>
     <None Update="Flattiverse\Mapping\Units\GenerateUnits.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>GenerateUnits.cs</LastGenOutput>
     </None>
     <None Update="Flattiverse\Mapping\Units\SaveUnit.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -34,6 +32,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="Flattiverse\Mapping\Units\GenerateUnits.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>GenerateUnits.tt</DependentUpon>
+    </Compile>
     <Compile Update="Flattiverse\Messaging\Listeners\GenerateListener.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>

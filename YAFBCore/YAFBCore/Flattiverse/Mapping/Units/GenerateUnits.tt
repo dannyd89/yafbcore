@@ -24,20 +24,18 @@ void GenerateUnit(string rawName, string rawNameVar, string unitName)
 using System;
 using Flattiverse;
 
-namespace RAGE.Mapping.Units
+namespace YAFBCore.Flattiverse.Mapping.Units
 {
-
 	public class <#= unitName #> : MapUnit
 	{
 		private <#= rawName #> <#= rawNameVar #>;
 	
-		public <#= unitName #>(<#= rawName #> <#= rawNameVar #>, Vector position)
-			: base(<#= rawNameVar #>, position)
+		public <#= unitName #>(Map map, <#= rawName #> <#= rawNameVar #>, Vector movementOffset)
+			: base(map, <#= rawNameVar #>, movementOffset)
 		{
 			this.<#= rawNameVar #> = <#= rawNameVar #>;
 		}
 	}
-
 }
 <#+ 
 }
