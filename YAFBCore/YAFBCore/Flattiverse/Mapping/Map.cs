@@ -24,6 +24,11 @@ namespace YAFBCore.Flattiverse.Mapping
         internal const int SectionSize = 4096;
 
         /// <summary>
+        /// The universe this map belongs to
+        /// </summary>
+        public readonly Universe Universe;
+
+        /// <summary>
         /// Holding all known still units in this map for faster merging
         /// </summary>
         private Dictionary<string, MapUnit> stillUnits = new Dictionary<string, MapUnit>();
@@ -43,16 +48,17 @@ namespace YAFBCore.Flattiverse.Mapping
         /// <summary>
         /// Defines by how many sections the map gets enlarged if needed
         /// </summary>
-        private int sectionExtensionCounter = 0;
+        private int sectionExtensionCounter = 1;
 
         /// <summary>
         /// Private constructor to set Id
         /// </summary>
-        private Map()
+        private Map(Universe universe)
         {
             Id = counter++;
+            Universe = universe;
 
-#warning TODO: Setup default sections
+            enlargeMap();
         }
 
         /// <summary>
@@ -74,9 +80,10 @@ namespace YAFBCore.Flattiverse.Mapping
             if (movementOffset.IsZeroVector())
                 return null;
 
-            string currentPlayerName = creator.Universe.Connector.Player.Name;
+            Universe universe = creator.Universe;
+            string currentPlayerName = universe.Connector.Player.Name;
 
-            Map map = new Map();
+            Map map = new Map(universe);
 
             MapUnit mapUnit;
             foreach (Unit unit in units)
@@ -105,12 +112,45 @@ namespace YAFBCore.Flattiverse.Mapping
             return map;
         }
 
+        /// <summary>
+        /// Enlarges the mapSections array if needed
+        /// </summary>
+        private void enlargeMap()
+        {
+            if (mapSections == null)
+            {
+                mapSections = new MapSection[sectionCount * sectionCount];
+            }
+            else
+            {
+                int tempCount = 3 + (int)Math.Pow(2, sectionExtensionCounter++);
+
+                var temp = new MapSection[tempCount * tempCount];
+
+                for (int y = 0; y < tempCount; y++)
+                    for (int x = 0; x < tempCount; x++)
+                    {
+                        if (y == 0 || y == tempCount - 1 && x == 0 || x == tempCount - 1)
+                            temp[x * y] = new MapSection(this);
+                        else
+                            temp[x * y] = mapSections[(x - 1) * (y - 1)];
+                    }
+
+                sectionCount = tempCount;
+                mapSections = temp;
+            }
+        }
+
         private int getMapSectionIndex(float x, float y, int sectionCount)
         {
 #warning TODO: Hier muss noch ein Check rein ob X/Y außerhalb der Section-Bounds sind, wenn ja müssen die Sections erweitert werden
 
+            float posX = ((x + (sectionCount / 2f) * SectionSize) / SectionSize);
+            float posY = ((y + (sectionCount / 2f) * SectionSize) / SectionSize) * sectionCount;
 
-            return (int)(((x + (sectionCount / 2f) * SectionSize) / SectionSize) + ((y + (sectionCount / 2f) * SectionSize) / SectionSize) * sectionCount);
+            if 
+
+            return (int)(posX + posY);
         }
     }
 }

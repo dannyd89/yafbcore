@@ -1,6 +1,7 @@
 ﻿using Flattiverse;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,21 +13,21 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         public readonly Map Map;
 
         public readonly string Name;
+        public readonly UnitKind Kind;
 
         protected int age;
 
         protected bool isOrbiting;
         protected bool isSolid;
         protected bool isMasking;
-
-        protected UnitKind kind;
         protected float radius;
         protected Mobility mobility;
 
         protected float gravity;
 
-        protected Vector position;
-        protected Vector movement;
+        internal Vector PositionInternal;
+        internal Vector MovementInternal;
+
         protected Vector orbitingCenter;
         protected List<UnitOrbitingState> orbitingList;
 
@@ -40,7 +41,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         {
             Map = map;
 
-            kind = unit.Kind;
+            Kind = unit.Kind;
             radius = unit.Radius;
             Name = unit.Name;
 
@@ -51,8 +52,8 @@ namespace YAFBCore.Flattiverse.Mapping.Units
             
             gravity = unit.Gravity;
 
-            position = unit.Position;
-            movement = unit.Movement - movementOffset;
+            PositionInternal = unit.Position;
+            MovementInternal = unit.Movement - movementOffset;
             
             if (isOrbiting)
             {
@@ -75,7 +76,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         {
             Map = mapUnit.Map;
 
-            kind = mapUnit.Kind;
+            Kind = mapUnit.Kind;
             radius = mapUnit.Radius;
             Name = mapUnit.Name;
 
@@ -86,8 +87,8 @@ namespace YAFBCore.Flattiverse.Mapping.Units
 
             gravity = mapUnit.gravity;
 
-            position = mapUnit.position;
-            movement = mapUnit.movement;
+            PositionInternal = mapUnit.PositionInternal;
+            MovementInternal = mapUnit.MovementInternal;
 
             if (isOrbiting)
             {
@@ -116,7 +117,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         /// </summary>
         public virtual int AgeMax
         {
-            get { return 0; }
+            get { return -1; }
         }
 
         /// <summary>
@@ -146,14 +147,6 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         /// <summary>
         /// 
         /// </summary>
-        public UnitKind Kind
-        {
-            get { return kind; }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
         public float Radius
         {
             get { return radius; }
@@ -166,6 +159,22 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         {
             get { return mobility; }
         }
+
+        /// <summary>
+        /// Returns a copy of the position vector
+        /// </summary>
+        public Vector Position
+        {
+            get { return new Vector(PositionInternal); }
+        }
+
+        /// <summary>
+        /// Returns a copy of the movement vector
+        /// </summary>
+        public Vector Movement
+        {
+            get { return new Vector(MovementInternal); }
+        }
         #endregion
 
         /// <summary>
@@ -175,6 +184,9 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         /// <returns></returns>
         internal virtual bool Age()
         {
+            if (AgeMax > -1 && age++ < AgeMax)
+                return false;
+
             if (isOrbiting)
             {
                 Vector currentCenter = new Vector(orbitingCenter);
@@ -188,23 +200,32 @@ namespace YAFBCore.Flattiverse.Mapping.Units
                     currentCenter += Vector.FromAngleLength(orbitingState.Angle, orbitingState.Distance);
                 }
 
-                position = currentCenter;
+                PositionInternal = currentCenter;
             }
-
-            if (age++ < AgeMax)
-                return false;
 
             return true;
         }
 
-        internal virtual void UpdateKind(Unit unit)
+        /// <summary>
+        /// Updates current unit with passed unit
+        /// No checks 
+        /// </summary>
+        /// <param name="mapUnit"></param>
+        internal virtual void Update(MapUnit mapUnit)
         {
+            Debug.Assert(Name == mapUnit.Name && Kind == mapUnit.Kind);
 
-        }
+            age = 0;
 
-        internal virtual MapUnit Simulate(int ticks)
-        {
-            return null;
+            mobility = mapUnit.Mobility;
+            isOrbiting = mapUnit.IsOrbiting;
+            isMasking = mapUnit.IsMasking;
+            isSolid = mapUnit.IsSolid;
+
+            gravity = mapUnit.gravity;
+
+            PositionInternal = mapUnit.PositionInternal;
+            MovementInternal = mapUnit.MovementInternal;
         }
     }
 }
