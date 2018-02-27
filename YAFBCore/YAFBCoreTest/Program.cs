@@ -36,6 +36,8 @@ namespace YAFBCoreTest
                 Flattiverse.Ship ship = session.CreateShip("D3RP", "D3RP");
                 ship.Continue();
 
+                Console.CursorVisible = false;
+
                 while (isRunning)
                 {
                     Console.SetCursorPosition(0, 0);
