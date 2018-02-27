@@ -5,12 +5,12 @@ namespace YAFBCore.Flattiverse.Mapping.Units
 {
 	public class SwitchMapUnit : MapUnit
 	{
-		private Switch switch;
+		private Switch @switch;
 	
-		public SwitchMapUnit(Map map, Switch switch, Vector movementOffset)
-			: base(map, switch, movementOffset)
+		public SwitchMapUnit(Map map, Switch @switch, Vector movementOffset)
+			: base(map, @switch, movementOffset)
 		{
-			this.switch = switch;
+			this.@switch = @switch;
 		}
 	}
 }

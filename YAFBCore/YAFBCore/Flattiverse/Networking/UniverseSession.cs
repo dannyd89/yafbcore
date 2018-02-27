@@ -113,6 +113,23 @@ namespace YAFBCore.Flattiverse.Networking
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="shipName"></param>
+        /// <param name="shipClass"></param>
+        /// <returns></returns>
+        public Ship CreateShip(string shipClass, string shipName)
+        {
+            if (!isDisposed)
+                lock (syncObject)
+                {
+                    return UniverseGroup.RegisterShip(shipClass, shipName);
+                }
+
+            throw new InvalidOperationException("Can't create flow control on a disposed universe session");
+        }
+
+        /// <summary>
         /// Disposes all information and leaves the universe
         /// </summary>
         public void Dispose()

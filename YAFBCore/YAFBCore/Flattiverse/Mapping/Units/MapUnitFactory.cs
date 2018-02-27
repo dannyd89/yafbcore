@@ -79,10 +79,10 @@ namespace YAFBCore.Flattiverse.Mapping.Units
             }
         }
 
-#warning TODO: Funktionen für die verschiedenen Controllables
-        //public static MapUnit GetMapUnit(FlattiBase.Screens.Screen screen, Controllable controllable, Vector movementOffset)
-        //{
-        //    return new MapUnitPlayerShip(screen, controllable, movementOffset);
-        //}
+        public static MapUnit GetMapUnit(Map map, Controllable controllable, Vector movementOffset)
+        {
+#warning TODO: Hier muss noch eine Unterscheidung rein für die verschiedenen Typen an Controllables
+            return new PlayerShipMapUnit(map, controllable, movementOffset);
+        }
     }
 }

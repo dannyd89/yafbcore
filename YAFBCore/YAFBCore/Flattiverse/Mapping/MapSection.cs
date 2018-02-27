@@ -33,7 +33,7 @@ namespace YAFBCore.Flattiverse.Mapping
         /// <summary>
         /// Holds all the still units in this section
         /// </summary>
-        private MapUnit[] stillUnits = new MapUnit[InitialArraySize];
+        internal MapUnit[] StillUnits = new MapUnit[InitialArraySize];
 
         /// <summary>
         /// Current index of the stillUnits array
@@ -43,7 +43,7 @@ namespace YAFBCore.Flattiverse.Mapping
         /// <summary>
         /// Holds all the units which need to be aged in this section
         /// </summary>
-        private MapUnit[] agingUnits = new MapUnit[InitialArraySize];
+        internal MapUnit[] AgingUnits = new MapUnit[InitialArraySize];
 
         /// <summary>
         /// Current index of the agingUnits array
@@ -53,7 +53,7 @@ namespace YAFBCore.Flattiverse.Mapping
         /// <summary>
         /// 
         /// </summary>
-        private MapUnit[] playerUnits = new MapUnit[InitialArraySize];
+        internal MapUnit[] PlayerUnits = new MapUnit[InitialArraySize];
 
         /// <summary>
         /// Current index of the playerUnits array
@@ -78,37 +78,37 @@ namespace YAFBCore.Flattiverse.Mapping
             int index;
             if (mapUnit.Mobility == Mobility.Still)
             {
-                if (!arrayContains(stillUnits, mapUnit, out index))
-                    addInternal(ref stillUnits, ref stillIndex, mapUnit);
+                if (!arrayContains(StillUnits, mapUnit, out index))
+                    addInternal(ref StillUnits, ref stillIndex, mapUnit);
             }
 
             if (mapUnit.IsAging)
             {
-                if (!arrayContains(agingUnits, mapUnit, out index))
-                    addInternal(ref agingUnits, ref agingIndex, mapUnit);
+                if (!arrayContains(AgingUnits, mapUnit, out index))
+                    addInternal(ref AgingUnits, ref agingIndex, mapUnit);
                 else
                 {
-                    if (agingUnits[index].Kind == mapUnit.Kind)
-                        agingUnits[index].Update(mapUnit);
+                    if (AgingUnits[index].Kind == mapUnit.Kind)
+                        AgingUnits[index].Update(mapUnit);
                     else
-                        agingUnits[index] = mapUnit;
+                        AgingUnits[index] = mapUnit;
                 }
             }
 
-            if (mapUnit.Kind == UnitKind.PlayerBase 
+            if (mapUnit.Kind == UnitKind.PlayerShip // Check first cause most used
+                || mapUnit.Kind == UnitKind.PlayerBase 
                 || mapUnit.Kind == UnitKind.PlayerDrone 
                 || mapUnit.Kind == UnitKind.PlayerPlatform 
-                || mapUnit.Kind == UnitKind.PlayerProbe 
-                || mapUnit.Kind == UnitKind.PlayerShip)
+                || mapUnit.Kind == UnitKind.PlayerProbe)
             {
-                if (!arrayContains(playerUnits, mapUnit, out index))
-                    addInternal(ref playerUnits, ref playerIndex, mapUnit);
+                if (!arrayContains(PlayerUnits, mapUnit, out index))
+                    addInternal(ref PlayerUnits, ref playerIndex, mapUnit);
                 else
                 {
-                    if (playerUnits[index].Kind == mapUnit.Kind)
-                        playerUnits[index].Update(mapUnit);
+                    if (PlayerUnits[index].Kind == mapUnit.Kind)
+                        PlayerUnits[index].Update(mapUnit);
                     else
-                        playerUnits[index] = mapUnit;
+                        PlayerUnits[index] = mapUnit;
                 }
             }
         }
@@ -122,8 +122,7 @@ namespace YAFBCore.Flattiverse.Mapping
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool arrayContains(MapUnit[] array, MapUnit mapUnit, out int index)
         {
-            int length = array.Length;
-            for (int i = 0; i < length; i++)
+            for (int i = 0; i < array.Length; i++)
             {
                 if (array[i] == null)
                     break;
@@ -143,7 +142,6 @@ namespace YAFBCore.Flattiverse.Mapping
         /// 
         /// </summary>
         /// <param name="array"></param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void enlargeArray(ref MapUnit[] array)
         {
             int currentCapacity = array.Length;
@@ -164,12 +162,9 @@ namespace YAFBCore.Flattiverse.Mapping
         /// <param name="array"></param>
         /// <param name="index"></param>
         /// <param name="mapUnit"></param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void addInternal(ref MapUnit[] array, ref int index, MapUnit mapUnit)
         {
-            int currentCapacity = array.Length;
-
-            if (index + 1 > currentCapacity)
+            if (index > array.Length - 1)
                 enlargeArray(ref array);
 
             array[index++] = mapUnit;

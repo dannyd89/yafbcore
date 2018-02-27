@@ -1,6 +1,7 @@
 ﻿using Flattiverse;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -28,7 +29,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         internal Vector PositionInternal;
         internal Vector MovementInternal;
 
-        protected Vector orbitingCenter;
+        internal Vector OrbitingCenter;
         protected List<UnitOrbitingState> orbitingList;
 
         /// <summary>
@@ -57,12 +58,72 @@ namespace YAFBCore.Flattiverse.Mapping.Units
             
             if (isOrbiting)
             {
-                orbitingCenter = unit.OrbitingCenter;
+                OrbitingCenter = unit.OrbitingCenter;
 
                 orbitingList = new List<UnitOrbitingState>();
 
                 foreach (var orbitingState in unit.OrbitingList)
                     orbitingList.Add(new UnitOrbitingState(orbitingState));
+            }
+
+            age = 0;
+        }
+
+        /// <summary>
+        /// Optimized ctor for own map units
+        /// </summary>
+        /// <param name="map"></param>
+        /// <param name="kind"></param>
+        /// <param name="radius"></param>
+        /// <param name="name"></param>
+        /// <param name="mobility"></param>
+        /// <param name="isOrbiting"></param>
+        /// <param name="isMasking"></param>
+        /// <param name="isSolid"></param>
+        /// <param name="gravity"></param>
+        /// <param name="position"></param>
+        /// <param name="movement"></param>
+        /// <param name="movementOffset"></param>
+        /// <param name="orbitingCenter"></param>
+        /// <param name="orbitingList"></param>
+        internal MapUnit(Map map, 
+                         UnitKind kind,
+                         float radius,
+                         string name, 
+                         Mobility mobility,
+                         bool isOrbiting,
+                         bool isMasking,
+                         bool isSolid,
+                         float gravity,
+                         Vector position, 
+                         Vector movement,
+                         Vector orbitingCenter = null,
+                         ReadOnlyCollection<OrbitingState> orbitingList = null)
+        {
+            Map = map;
+
+            Kind = kind;
+            this.radius = radius;
+            Name = name;
+
+            this.mobility = mobility;
+            this.isOrbiting = isOrbiting;
+            this.isMasking = isMasking;
+            this.isSolid = isSolid;
+
+            this.gravity = gravity;
+
+            PositionInternal = position;
+            MovementInternal = movement;
+
+            if (isOrbiting)
+            {
+                OrbitingCenter = orbitingCenter;
+
+                this.orbitingList = new List<UnitOrbitingState>();
+
+                foreach (var orbitingState in orbitingList)
+                    this.orbitingList.Add(new UnitOrbitingState(orbitingState));
             }
 
             age = 0;
@@ -92,7 +153,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
 
             if (isOrbiting)
             {
-                orbitingCenter = mapUnit.orbitingCenter;
+                OrbitingCenter = mapUnit.OrbitingCenter;
 
                 orbitingList = new List<UnitOrbitingState>();
 
@@ -189,7 +250,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
 
             if (isOrbiting)
             {
-                Vector currentCenter = new Vector(orbitingCenter);
+                Vector currentCenter = new Vector(OrbitingCenter);
 
                 foreach (UnitOrbitingState orbitingState in orbitingList)
                 {
@@ -226,6 +287,27 @@ namespace YAFBCore.Flattiverse.Mapping.Units
 
             PositionInternal = mapUnit.PositionInternal;
             MovementInternal = mapUnit.MovementInternal;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            StringBuilder sb = new StringBuilder();
+
+            sb.Append(Name);
+            sb.Append(" ");
+            sb.Append("(");
+            sb.Append(Kind.ToString());
+            sb.Append(") Position: (");
+            sb.Append(PositionInternal.X.ToString("F"));
+            sb.Append(" / ");
+            sb.Append(PositionInternal.X.ToString("F"));
+            sb.Append(")");
+
+            return sb.ToString();
         }
     }
 }
