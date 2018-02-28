@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using YAFBCore.Flattiverse.Mapping;
 using YAFBCore.Flattiverse.Networking;
 
@@ -13,10 +14,10 @@ namespace YAFBCoreTest
 
         static void Main(string[] args)
         {
-            Connection connection = ConnectionManager.Connect("ddraghici@gmx.de", "flattiverse1337");
+            Connection connection = ConnectionManager.Connect("kriegsviech@web.de", "flattiverse1337");
 
             Flattiverse.UniverseGroup universeGroup = connection.UniverseGroups["Time Master"];
-            UniverseSession session = connection.Join(universeGroup, "dannyd", universeGroup.Teams["None"]);
+            UniverseSession session = connection.Join(universeGroup, "dannyTest", universeGroup.Teams["None"]);
 
             System.Threading.ThreadPool.QueueUserWorkItem(worker, session);
 
@@ -27,18 +28,20 @@ namespace YAFBCoreTest
         {
             UniverseSession session = state as UniverseSession;
             UniverseGroupFlowControlWrapper flowControl = null;
-            
+
             float scanDirection = 0f;
-            try
+            Flattiverse.Ship ship = null;
+
+            flowControl = session.CreateFlowControl();
+
+            ship = session.CreateShip("D3RPTest", "D3RPTest");
+            ship.Continue();
+
+            Console.CursorVisible = false;
+
+            while (isRunning)
             {
-                flowControl = session.CreateFlowControl();
-
-                Flattiverse.Ship ship = session.CreateShip("D3RP", "D3RP");
-                ship.Continue();
-
-                Console.CursorVisible = false;
-
-                while (isRunning)
+                try
                 {
                     Console.SetCursorPosition(0, 0);
 
@@ -63,21 +66,26 @@ namespace YAFBCoreTest
 
                     Map map = Map.Create(ship, units);
 
-                    if (globalMap == null)
-                        globalMap = map;
-                    else
+                    if (map != null)
                     {
-                        globalMap.BeginUpdate();
-                        map.BeginUpdate();
+                        if (globalMap == null)
+                            globalMap = map;
+                        else
+                        {
+                            globalMap.BeginUpdate();
+                            map.BeginUpdate();
 
-                        globalMap.Merge(map);
+                            globalMap.Merge(map);
 
-                        globalMap.DebugPrint();
+                            globalMap.Age();
 
-                        globalMap.EndUpdate();
-                        map.EndUpdate();
+                            globalMap.DebugPrint();
 
-                        map.Dispose();
+                            globalMap.EndUpdate();
+                            map.EndUpdate();
+
+                            map.Dispose();
+                        }
                     }
                     #endregion
 
@@ -88,26 +96,40 @@ namespace YAFBCoreTest
                     foreach (Flattiverse.Unit unit in units)
                         if ((unit.Mobility == global::Flattiverse.Mobility.Still)
                             && unit.Kind != global::Flattiverse.UnitKind.Explosion
-                            && refUnit == null || (refUnit != null && refUnit.Position.Length > unit.Position.Length))
+                            && (refUnit == null || (refUnit != null && refUnit.Position.Length > unit.Position.Length)))
                             refUnit = unit;
 
                     ship.Move(refUnit.Movement);
 
                     flowControl.Commit();
+
+                }
+                catch (NullReferenceException)
+                {
+                    Console.WriteLine();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    if (ship != null && ship.IsAlive)
+                        continue;
+
+                    if (ship != null && !ship.IsAlive)
+                        ship.Continue();
+
+                    Console.Clear();
+                    //Console.WriteLine(ex.StackTrace);
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine();
+            //finally
+            //{
+            //    if (flowControl != null)
+            //        session.RemoveFlowControl(flowControl);
 
-                Console.WriteLine(ex.Message);
-                Console.WriteLine(ex.StackTrace);
-            }
-            finally
-            {
-                if (flowControl != null)
-                    session.RemoveFlowControl(flowControl);
-            }
+            //    Console.WriteLine("Crashed...");
+
+            //    session.Dispose();
+            //}
         }
     }
 }

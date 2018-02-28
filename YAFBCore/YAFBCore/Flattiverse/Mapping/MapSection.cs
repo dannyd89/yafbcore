@@ -1,6 +1,7 @@
 ﻿using Flattiverse;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -33,32 +34,47 @@ namespace YAFBCore.Flattiverse.Mapping
         /// <summary>
         /// Holds all the still units in this section
         /// </summary>
-        internal MapUnit[] StillUnits = new MapUnit[InitialArraySize];
+        public MapUnit[] StillUnits = new MapUnit[InitialArraySize];
 
         /// <summary>
-        /// Current index of the stillUnits array
+        /// Current count of the stillUnits array
         /// </summary>
-        private int stillIndex = 0;
+        private int stillCount;
+
+        /// <summary>
+        /// Current count of still units in this section
+        /// </summary>
+        public int StillCount => stillCount;
 
         /// <summary>
         /// Holds all the units which need to be aged in this section
         /// </summary>
-        internal MapUnit[] AgingUnits = new MapUnit[InitialArraySize];
+        public MapUnit[] AgingUnits = new MapUnit[InitialArraySize];
 
         /// <summary>
-        /// Current index of the agingUnits array
+        /// Current count of the agingUnits array
         /// </summary>
-        private int agingIndex = 0;
+        private int agingCount;
 
         /// <summary>
-        /// 
+        /// Current count of aging units in this section
         /// </summary>
-        internal MapUnit[] PlayerUnits = new MapUnit[InitialArraySize];
+        public int AgingCount => agingCount;
 
         /// <summary>
-        /// Current index of the playerUnits array
+        /// Holds all the player units in this section
         /// </summary>
-        private int playerIndex = 0;
+        public MapUnit[] PlayerUnits = new MapUnit[InitialArraySize];
+
+        /// <summary>
+        /// Current count of the playerUnits array
+        /// </summary>
+        private int playerCount;
+
+        /// <summary>
+        /// Current count of player units in this section
+        /// </summary>
+        public int PlayerCount => playerCount;
 
         /// <summary>
         /// Creates a map section
@@ -70,7 +86,7 @@ namespace YAFBCore.Flattiverse.Mapping
         }
 
         /// <summary>
-        /// 
+        /// Adds or update the given unit
         /// </summary>
         /// <param name="mapUnit"></param>
         public void AddOrUpdate(MapUnit mapUnit)
@@ -79,13 +95,13 @@ namespace YAFBCore.Flattiverse.Mapping
             if (mapUnit.Mobility == Mobility.Still)
             {
                 if (!arrayContains(StillUnits, mapUnit, out index))
-                    addInternal(ref StillUnits, ref stillIndex, mapUnit);
+                    addInternal(ref StillUnits, ref stillCount, mapUnit);
             }
 
             if (mapUnit.IsAging)
             {
                 if (!arrayContains(AgingUnits, mapUnit, out index))
-                    addInternal(ref AgingUnits, ref agingIndex, mapUnit);
+                    addInternal(ref AgingUnits, ref agingCount, mapUnit);
                 else
                 {
                     if (AgingUnits[index].Kind == mapUnit.Kind)
@@ -102,7 +118,7 @@ namespace YAFBCore.Flattiverse.Mapping
                 || mapUnit.Kind == UnitKind.PlayerProbe)
             {
                 if (!arrayContains(PlayerUnits, mapUnit, out index))
-                    addInternal(ref PlayerUnits, ref playerIndex, mapUnit);
+                    addInternal(ref PlayerUnits, ref playerCount, mapUnit);
                 else
                 {
                     if (PlayerUnits[index].Kind == mapUnit.Kind)
@@ -110,6 +126,41 @@ namespace YAFBCore.Flattiverse.Mapping
                     else
                         PlayerUnits[index] = mapUnit;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Sorts any array 
+        /// </summary>
+        public void Sort(MapSectionSortType sortType)
+        {
+            int sortValue = (int)sortType;
+
+            if ((sortValue & 0x0001) == 0x0001)
+            {
+                Array.Sort(StillUnits, 0, stillCount, RadiusComparer.Default);
+            }
+
+            if ((sortValue & 0x0010) == 0x0010)
+            {
+                Array.Sort(AgingUnits, 0, agingCount, AgeComparer.Default);
+
+                for (int i = 0; i < AgingUnits.Length; i++)
+                {
+                    if (i == 0)
+                        Debug.Assert(AgingUnits[i] != null);
+
+                    if (AgingUnits[i] == null)
+                    {
+                        agingCount = i;
+                        break;
+                    }
+                }
+            }
+
+            if ((sortValue & 0x0100) == 0x0100)
+            {
+                // TODO: PlayerUnits sorter
             }
         }
 
@@ -168,6 +219,57 @@ namespace YAFBCore.Flattiverse.Mapping
                 enlargeArray(ref array);
 
             array[index++] = mapUnit;
+        }
+
+        /// <summary>
+        /// Comparer to sort units by their radius.
+        /// Sort Type: DESC
+        /// </summary>
+        private class RadiusComparer : IComparer<MapUnit>
+        {
+            public static readonly RadiusComparer Default = new RadiusComparer();
+
+            private bool desc;
+
+            public RadiusComparer(bool desc = true)
+            {
+                this.desc = desc;
+            }
+
+            public int Compare(MapUnit x, MapUnit y)
+            {
+                if (x == null && y != null)
+                    return 1;
+                else if (x != null && y == null)
+                    return -1;
+                else if (x == null && y == null)
+                    return 0;
+
+                int val = x.RadiusInternal.CompareTo(y.RadiusInternal);
+
+                return desc ? -val : val;
+            }
+        }
+
+        /// <summary>
+        /// Comparer to sort units by their age.
+        /// Sort Type: ASC
+        /// </summary>
+        private class AgeComparer : IComparer<MapUnit>
+        {
+            public static readonly AgeComparer Default = new AgeComparer();
+
+            public int Compare(MapUnit x, MapUnit y)
+            {
+                if (x == null && y != null)
+                    return 1;
+                else if (x != null && y == null)
+                    return -1;
+                else if (x == null && y == null)
+                    return 0;
+
+                return x.AgeInternal.CompareTo(y.AgeInternal);
+            }
         }
     }
 }

@@ -34,5 +34,12 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         public override bool IsAging => true;
 
         public override int AgeMax => controllable != null ? -1 : 100;
+
+        internal override bool Age()
+        {
+            PositionInternal = PositionInternal + MovementInternal;
+
+            return base.Age();
+        }
     }
 }

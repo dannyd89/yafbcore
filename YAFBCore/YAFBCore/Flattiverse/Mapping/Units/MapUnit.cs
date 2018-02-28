@@ -16,18 +16,22 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         public readonly string Name;
         public readonly UnitKind Kind;
 
-        protected int age;
+        // Pretty dirty to just define variables as internal 
+        // But it's faster cause of calling Properties often is slowwww
+
+        internal int AgeInternal;
+
+        internal Vector PositionInternal;
+        internal Vector MovementInternal;
+
+        internal float RadiusInternal;
 
         protected bool isOrbiting;
         protected bool isSolid;
         protected bool isMasking;
-        protected float radius;
         protected Mobility mobility;
 
         protected float gravity;
-
-        internal Vector PositionInternal;
-        internal Vector MovementInternal;
 
         internal Vector OrbitingCenter;
         protected List<UnitOrbitingState> orbitingList;
@@ -43,7 +47,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
             Map = map;
 
             Kind = unit.Kind;
-            radius = unit.Radius;
+            RadiusInternal = unit.Radius;
             Name = unit.Name;
 
             mobility = unit.Mobility;
@@ -66,7 +70,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
                     orbitingList.Add(new UnitOrbitingState(orbitingState));
             }
 
-            age = 0;
+            AgeInternal = 0;
         }
 
         /// <summary>
@@ -103,7 +107,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
             Map = map;
 
             Kind = kind;
-            this.radius = radius;
+            this.RadiusInternal = radius;
             Name = name;
 
             this.mobility = mobility;
@@ -126,7 +130,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
                     this.orbitingList.Add(new UnitOrbitingState(orbitingState));
             }
 
-            age = 0;
+            AgeInternal = 0;
         }
 
         /// <summary>
@@ -138,7 +142,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
             Map = mapUnit.Map;
 
             Kind = mapUnit.Kind;
-            radius = mapUnit.Radius;
+            RadiusInternal = mapUnit.Radius;
             Name = mapUnit.Name;
 
             mobility = mapUnit.Mobility;
@@ -161,7 +165,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
                     orbitingList.Add(new UnitOrbitingState(orbitingState));
             }
 
-            age = 0;
+            AgeInternal = 0;
         }
 
         #region Properties
@@ -210,7 +214,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         /// </summary>
         public float Radius
         {
-            get { return radius; }
+            get { return RadiusInternal; }
         }
 
         /// <summary>
@@ -242,10 +246,10 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         /// Ages the unit
         /// Performs orbiting calculations if the unit is orbiting
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Return false if unit age reached AgeMax</returns>
         internal virtual bool Age()
         {
-            if (AgeMax > -1 && age++ < AgeMax)
+            if (AgeMax > -1 && AgeInternal++ > AgeMax)
                 return false;
 
             if (isOrbiting)
@@ -276,7 +280,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         {
             Debug.Assert(Name == mapUnit.Name && Kind == mapUnit.Kind);
 
-            age = 0;
+            AgeInternal = 0;
 
             mobility = mapUnit.Mobility;
             isOrbiting = mapUnit.IsOrbiting;

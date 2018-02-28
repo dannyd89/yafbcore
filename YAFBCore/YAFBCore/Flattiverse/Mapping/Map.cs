@@ -225,8 +225,9 @@ namespace YAFBCore.Flattiverse.Mapping
         /// <returns></returns>
         public bool Merge(Map other)
         {
-            if (isReadOnly || other.isReadOnly)
-                throw new InvalidOperationException("Please call BeginUpdate on both maps before trying to merge them");
+            //if (isReadOnly || other.isReadOnly)
+            //    throw new InvalidOperationException("Please call BeginUpdate on both maps before trying to merge them");
+            Debug.Assert(!isReadOnly || !other.isReadOnly);
 
             Vector positionOffset = null;
 
@@ -293,6 +294,36 @@ namespace YAFBCore.Flattiverse.Mapping
         }
 
         /// <summary>
+        /// Ages the map for 1 tick
+        /// </summary>
+        public void Age()
+        {
+            Debug.Assert(!isReadOnly);
+
+            for (int i = 0; i < mapSections.Length; i++)
+            {
+                MapSection mapSection = mapSections[i];
+                int count = mapSection.AgingCount;
+
+                if (count > 0)
+                {
+                    for (int x = count - 1; x >= 0; x--)
+                    {
+                        MapUnit mapUnit = mapSection.AgingUnits[x];
+
+                        if (mapUnit == null)
+                            break;
+
+                        if (!mapUnit.Age())
+                            mapSection.AgingUnits[x] = null;
+                    }
+
+                    mapSection.Sort(MapSectionSortType.AgingUnits);
+                }
+            }
+        }
+
+        /// <summary>
         /// 
         /// </summary>
         [Conditional("DEBUG")]
@@ -302,23 +333,26 @@ namespace YAFBCore.Flattiverse.Mapping
 
             StringBuilder sb = new StringBuilder();
 
-            sb.AppendLine("-- Still Units --");
+            sb.AppendLine("-- Still Units --                                 ");
 
             foreach (KeyValuePair<string, MapUnit> unitKvp in stillUnits)
                 sb.AppendLine(unitKvp.Value.ToString());
 
             for (int i = 0; i < mapSections.Length; i++)
             {
-                sb.Append("-- Printing section with Index: ");
-                sb.AppendLine(i.ToString());
-
-                sb.AppendLine("\t---- Aging Units -----");
-                for (int x = 0; x < mapSections[i].AgingUnits.Length; x++)
+                if (mapSections[i].AgingCount > 0)
                 {
-                    if (mapSections[i].AgingUnits[x] == null)
-                        break;
+                    sb.Append("-- Printing section with Index:                              ");
+                    sb.AppendLine(i.ToString());
 
-                    sb.AppendLine(mapSections[i].AgingUnits[x].ToString());
+                    sb.AppendLine("\t---- Aging Units -----                              ");
+                    for (int x = 0; x < mapSections[i].AgingUnits.Length; x++)
+                    {
+                        if (mapSections[i].AgingUnits[x] == null)
+                            break;
+
+                        sb.AppendLine(mapSections[i].AgingUnits[x].ToString() + "                                ");
+                    }
                 }
             }
 
