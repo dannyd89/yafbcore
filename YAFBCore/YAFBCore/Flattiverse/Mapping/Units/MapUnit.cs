@@ -308,7 +308,7 @@ namespace YAFBCore.Flattiverse.Mapping.Units
             sb.Append(") Position: (");
             sb.Append(PositionInternal.X.ToString("F"));
             sb.Append(" / ");
-            sb.Append(PositionInternal.X.ToString("F"));
+            sb.Append(PositionInternal.Y.ToString("F"));
             sb.Append(")");
 
             return sb.ToString();

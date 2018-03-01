@@ -190,7 +190,7 @@ namespace YAFBCore.Flattiverse.Mapping
         }
 
         /// <summary>
-        /// 
+        /// Enlarges the passed array by double the capacity
         /// </summary>
         /// <param name="array"></param>
         private static void enlargeArray(ref MapUnit[] array)
