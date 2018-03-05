@@ -10,6 +10,7 @@ using YAFBCore.Utils;
 using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using YAFBCore.Utils.Mathematics;
 
 namespace YAFBCore.Flattiverse.Mapping
 {
@@ -55,20 +56,32 @@ namespace YAFBCore.Flattiverse.Mapping
         private int sectionExtensionCounter = 1;
 
         /// <summary>
-        /// 
+        /// Transformator to calculate in which section an unit has to be placed
+        /// Also works the other way around
         /// </summary>
         private Transformator transformator;
 
         /// <summary>
-        /// 
+        /// WaitHandle to lock the map to secure a consistent state for each call
         /// </summary>
         private AutoResetEvent lockMapEvent = new AutoResetEvent(true);
 
         /// <summary>
+        /// States whether the map is locked or not
+        /// </summary>
+        private volatile bool isLocked = false;
+
+        /// <summary>
         /// 
         /// </summary>
-        private volatile bool isReadOnly = true;
+        private volatile bool isDisposed;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool IsDisposed => isDisposed;
+
+        #region Constructors or Create functions
         /// <summary>
         /// Private constructor to set Id
         /// </summary>
@@ -123,98 +136,32 @@ namespace YAFBCore.Flattiverse.Mapping
 
             return map;
         }
+        #endregion
 
-        /// <summary>
-        /// Enlarges the mapSections array
-        /// </summary>
-        private void enlargeMap()
-        {
-            if (mapSections == null)
-            {
-                mapSections = new MapSection[sectionCount * sectionCount];
-
-                for (int i = 0; i < mapSections.Length; i++)
-                    mapSections[i] = new MapSection(this);
-            }
-            else
-            {
-                int tempCount = 3 + (int)Math.Pow(2, sectionExtensionCounter++);
-
-                var temp = new MapSection[tempCount * tempCount];
-
-                for (int y = 0; y < tempCount; y++)
-                    for (int x = 0; x < tempCount; x++)
-                    {
-                        if (y == 0 || y == tempCount - 1 && x == 0 || x == tempCount - 1)
-                            temp[x * y] = new MapSection(this);
-                        else
-                            temp[x * y] = mapSections[(x - 1) * (y - 1)];
-                    }
-
-                sectionCount = tempCount;
-                mapSections = temp;
-            }
-
-            float size = (sectionCount / 2f) * SectionSize;
-            transformator = new Transformator(-size, size, 0, sectionCount);
-        }
-
-        /// <summary>
-        /// Returns the transformed position of a unit into and index of a 1D array
-        /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        /// <returns></returns>
-        private int getMapSectionIndex(float x, float y)
-        {
-            float posX;
-            float posY;
-
-            bool check = false;
-            do
-            {
-                posX = transformator[x];
-                posY = transformator[y];
-
-                check = posX < 0f || posX > sectionCount || posY < 0f || posY > sectionCount;
-
-                if (check)
-                    enlargeMap();
-
-            } while (check);
-
-            return (int)posX + (int)posY * sectionCount;
-        }
-
-        /// <summary>
-        /// Returns the transformed position of a unit into and index of a 1D array
-        /// </summary>
-        /// <param name="vector"></param>
-        /// <returns></returns>
-        private int getMapSectionIndex(Vector vector)
-        {
-            Debug.Assert(vector != null);
-
-            return getMapSectionIndex(vector.X, vector.Y);
-        }
-
+        #region Public functions
         /// <summary>
         /// Execute before calling any functions who want to edit the map
         /// Or if you want a consistent state of the map for a specific call
         /// Locks map for current thread to edit
         /// </summary>
-        public void BeginUpdate()
+        public void BeginLock()
         {
+            if (isDisposed)
+                throw new InvalidOperationException("Map is already disposed");
+
             lockMapEvent.WaitOne();
-            isReadOnly = false;
+            isLocked = true;
         }
 
         /// <summary>
         /// Releases the lock for other threads to edit
         /// </summary>
-        public void EndUpdate()
+        public void EndLock()
         {
-            isReadOnly = true;
+            if (isDisposed)
+                throw new InvalidOperationException("Map is already disposed");
+
+            isLocked = false;
             lockMapEvent.Set();
         }
 
@@ -225,9 +172,11 @@ namespace YAFBCore.Flattiverse.Mapping
         /// <returns></returns>
         public bool Merge(Map other)
         {
-            //if (isReadOnly || other.isReadOnly)
-            //    throw new InvalidOperationException("Please call BeginUpdate on both maps before trying to merge them");
-            Debug.Assert(!isReadOnly || !other.isReadOnly);
+            if (isDisposed)
+                throw new InvalidOperationException("Map is already disposed");
+
+            if (!isLocked || !other.isLocked)
+                throw new InvalidOperationException("Please acquire a lock on both maps before trying to merge them");
 
             Vector positionOffset = null;
 
@@ -272,33 +221,15 @@ namespace YAFBCore.Flattiverse.Mapping
         }
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="array"></param>
-        private void addOrUpdateUnits(MapUnit[] array, Vector positionOffset)
-        {
-            for (int i = 0; i < array.Length; i++)
-            {
-                MapUnit mapUnit = array[i];
-
-                if (mapUnit == null)
-                    break;
-
-                mapUnit.PositionInternal = mapUnit.PositionInternal + positionOffset;
-
-                if (mapUnit.IsOrbiting)
-                    mapUnit.OrbitingCenter = mapUnit.OrbitingCenter + positionOffset;
-
-                mapSections[getMapSectionIndex(mapUnit.PositionInternal)].AddOrUpdate(mapUnit);
-            }
-        }
-
-        /// <summary>
-        /// Ages the map for 1 tick
+        /// Ages the map for one tick.
         /// </summary>
         public void Age()
         {
-            Debug.Assert(!isReadOnly);
+            if (isDisposed)
+                throw new InvalidOperationException("Map is already disposed");
+
+            if (!isLocked)
+                throw new InvalidOperationException("Please acquire a lock on this map before trying to age it");
 
             for (int i = 0; i < mapSections.Length; i++)
             {
@@ -311,8 +242,7 @@ namespace YAFBCore.Flattiverse.Mapping
                     {
                         MapUnit mapUnit = mapSection.AgingUnits[x];
 
-                        if (mapUnit == null)
-                            break;
+                        Debug.Assert(mapUnit != null);
 
                         if (!mapUnit.Age())
                             mapSection.AgingUnits[x] = null;
@@ -324,12 +254,65 @@ namespace YAFBCore.Flattiverse.Mapping
         }
 
         /// <summary>
-        /// 
+        /// Gets the units which are visible in the passed viewport
+        /// </summary>
+        /// <param name="viewport">Viewport which describes the area the game is currently looking at. It's highly advised to span the passed viewport a bit larger than the actual viewport.</param>
+        /// <returns>A list of units which are contained in the viewport</returns>
+        public List<MapUnit> GetUnits(RectangleF viewport)
+        {
+            if (isDisposed)
+                throw new InvalidOperationException("Map is already disposed");
+
+            if (!isLocked)
+                throw new InvalidOperationException("Please acquire a lock on this map before trying to age it");
+
+            List<MapUnit> mapUnits = new List<MapUnit>(300);
+            for (int i = getMapSectionIndex(viewport.Left, viewport.Top); i < getMapSectionIndex(viewport.Bottom, viewport.Right); i++)
+            {
+                MapSection mapSection = mapSections[i];
+
+                if (mapSection.Bounds.Intersects(viewport))
+                {
+                    mapUnits.AddRange(mapSection.StillUnits);
+
+                    for (int x = 0; x < mapSection.AgingCount; x++)
+                        if (!mapUnits.Contains(mapSection.AgingUnits[x]))
+                            mapUnits.Add(mapSection.AgingUnits[x]);
+
+                    for (int x = 0; x < mapSection.PlayerCount; x++)
+                        if (!mapUnits.Contains(mapSection.PlayerUnits[x]))
+                            mapUnits.Add(mapSection.PlayerUnits[x]);
+                }
+            }
+
+            return mapUnits;
+        }
+
+        /// <summary>
+        /// Disposes the map
+        /// </summary>
+        public void Dispose()
+        {
+            if (isDisposed)
+                throw new InvalidOperationException("Map is already disposed");
+
+            mapSections = null;
+            stillUnits = null;
+
+            lockMapEvent.Dispose();
+        }
+
+        /// <summary>
+        /// Prints the map into the console
         /// </summary>
         [Conditional("DEBUG")]
         public void DebugPrint()
         {
-            Debug.Assert(!isReadOnly);
+            if (isDisposed)
+                throw new InvalidOperationException("Map is already disposed");
+
+            if (!isLocked)
+                throw new InvalidOperationException("Please acquire a lock on this map before trying to age it");
 
             StringBuilder sb = new StringBuilder();
 
@@ -358,13 +341,107 @@ namespace YAFBCore.Flattiverse.Mapping
 
             Console.WriteLine(sb.ToString());
         }
+        #endregion
+
+        #region Private functions
+        /// <summary>
+        /// Enlarges the mapSections array
+        /// </summary>
+        private void enlargeMap()
+        {
+            if (mapSections == null)
+            {
+                mapSections = new MapSection[sectionCount * sectionCount];
+
+                float size = (sectionCount / 2f) * SectionSize;
+                transformator = new Transformator(-size, size, 0, sectionCount);
+
+                for (int i = 0; i < mapSections.Length; i++)
+                    mapSections[i] = new MapSection(this, new RectangleF(transformator.Rev(i % sectionCount), transformator.Rev(i / sectionCount), SectionSize, SectionSize));
+            }
+            else
+            {
+                int tempCount = 3 + (int)Math.Pow(2, sectionExtensionCounter++);
+
+                var temp = new MapSection[tempCount * tempCount];
+
+                float size = (tempCount / 2f) * SectionSize;
+                transformator = new Transformator(-size, size, 0, tempCount);
+
+                for (int y = 0; y < tempCount; y++)
+                    for (int x = 0; x < tempCount; x++)
+                    {
+                        if (y == 0 || y == tempCount - 1 && x == 0 || x == tempCount - 1)
+                            temp[x * y] = new MapSection(this, new RectangleF(transformator.Rev(x), transformator.Rev(y), SectionSize, SectionSize));
+                        else
+                            temp[x * y] = mapSections[(x - 1) * (y - 1)];
+                    }
+
+                sectionCount = tempCount;
+                mapSections = temp;
+            }
+        }
+
+        /// <summary>
+        /// Returns the transformed position of a unit into and index of a 1D array
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
+        private int getMapSectionIndex(float x, float y)
+        {
+            float posX;
+            float posY;
+
+            bool check = false;
+            do
+            {
+                posX = transformator[x];
+                posY = transformator[y];
+
+                check = posX < 0f || posX > sectionCount || posY < 0f || posY > sectionCount;
+
+                if (check)
+                    enlargeMap();
+
+            } while (check);
+
+            return (int)posX + (int)posY * sectionCount;
+        }
+
+        /// <summary>
+        /// Returns the transformed position of a unit into and index of a 1D array
+        /// </summary>
+        /// <param name="vector"></param>
+        /// <returns></returns>
+        private int getMapSectionIndex(Vector vector)
+        {
+            Debug.Assert(vector != null);
+
+            return getMapSectionIndex(vector.X, vector.Y);
+        }
 
         /// <summary>
         /// 
         /// </summary>
-        public void Dispose()
+        /// <param name="array"></param>
+        private void addOrUpdateUnits(MapUnit[] array, Vector positionOffset)
         {
-            lockMapEvent.Dispose();
+            for (int i = 0; i < array.Length; i++)
+            {
+                MapUnit mapUnit = array[i];
+
+                if (mapUnit == null)
+                    break;
+
+                mapUnit.PositionInternal = mapUnit.PositionInternal + positionOffset;
+
+                if (mapUnit.IsOrbiting)
+                    mapUnit.OrbitingCenter = mapUnit.OrbitingCenter + positionOffset;
+
+                mapSections[getMapSectionIndex(mapUnit.PositionInternal)].AddOrUpdate(mapUnit);
+            }
         }
+        #endregion
     }
 }

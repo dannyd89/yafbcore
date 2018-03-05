@@ -72,8 +72,8 @@ namespace YAFBCoreTest
                             globalMap = map;
                         else
                         {
-                            globalMap.BeginUpdate();
-                            map.BeginUpdate();
+                            globalMap.BeginLock();
+                            map.BeginLock();
 
                             globalMap.Merge(map);
 
@@ -81,8 +81,8 @@ namespace YAFBCoreTest
 
                             globalMap.DebugPrint();
 
-                            globalMap.EndUpdate();
-                            map.EndUpdate();
+                            globalMap.EndLock();
+                            map.EndLock();
 
                             map.Dispose();
                         }

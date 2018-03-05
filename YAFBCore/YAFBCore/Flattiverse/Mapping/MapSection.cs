@@ -32,6 +32,11 @@ namespace YAFBCore.Flattiverse.Mapping
         public readonly Map Parent;
 
         /// <summary>
+        /// Bounds of this section
+        /// </summary>
+        public readonly RectangleF Bounds;
+
+        /// <summary>
         /// Holds all the still units in this section
         /// </summary>
         public MapUnit[] StillUnits = new MapUnit[InitialArraySize];
@@ -80,9 +85,10 @@ namespace YAFBCore.Flattiverse.Mapping
         /// Creates a map section
         /// </summary>
         /// <param name="parent">Parent of this section</param>
-        public MapSection(Map parent)
+        public MapSection(Map parent, RectangleF bounds)
         {
             Parent = parent;
+            Bounds = bounds;
         }
 
         /// <summary>
@@ -170,7 +176,6 @@ namespace YAFBCore.Flattiverse.Mapping
         /// <param name="array">Array to search in</param>
         /// <param name="mapUnit">Unit to be searched</param>
         /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool arrayContains(MapUnit[] array, MapUnit mapUnit, out int index)
         {
             for (int i = 0; i < array.Length; i++)

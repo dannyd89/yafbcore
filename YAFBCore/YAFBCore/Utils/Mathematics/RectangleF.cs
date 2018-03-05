@@ -105,7 +105,7 @@ namespace YAFBCore.Utils.Mathematics
             {
                 return Left;
             }
-            set
+            internal set
             {
                 Right = value + Width;
                 Left = value;
@@ -122,7 +122,7 @@ namespace YAFBCore.Utils.Mathematics
             {
                 return Top;
             }
-            set
+            internal set
             {
                 Bottom = value + Height;
                 Top = value;
@@ -136,7 +136,7 @@ namespace YAFBCore.Utils.Mathematics
         public float Width
         {
             get { return Right - Left; }
-            set { Right = Left + value; }
+            internal set { Right = Left + value; }
         }
 
         /// <summary>
@@ -146,7 +146,7 @@ namespace YAFBCore.Utils.Mathematics
         public float Height
         {
             get { return Bottom - Top; }
-            set { Bottom = Top + value; }
+            internal set { Bottom = Top + value; }
         }
 
         /// <summary>
@@ -161,7 +161,7 @@ namespace YAFBCore.Utils.Mathematics
             {
                 return new Vector(X, Y);
             }
-            set
+            internal set
             {
                 X = value.X;
                 Y = value.Y;
@@ -206,7 +206,7 @@ namespace YAFBCore.Utils.Mathematics
             {
                 return new Size2F(Width, Height);
             }
-            set
+            internal set
             {
                 Width = value.Width;
                 Height = value.Height;
@@ -239,14 +239,14 @@ namespace YAFBCore.Utils.Mathematics
 
         /// <summary>Changes the position of the rectangle.</summary>
         /// <param name="amount">The values to adjust the position of the rectangle by.</param>
-        public void Offset(Point amount)
+        internal void Offset(Point amount)
         {
             Offset(amount.X, amount.Y);
         }
 
         /// <summary>Changes the position of the rectangle.</summary>
         /// <param name="amount">The values to adjust the position of the rectangle by.</param>
-        public void Offset(Vector amount)
+        internal void Offset(Vector amount)
         {
             Offset(amount.X, amount.Y);
         }
@@ -254,7 +254,7 @@ namespace YAFBCore.Utils.Mathematics
         /// <summary>Changes the position of the rectangle.</summary>
         /// <param name="offsetX">Change in the x-position.</param>
         /// <param name="offsetY">Change in the y-position.</param>
-        public void Offset(float offsetX, float offsetY)
+        internal void Offset(float offsetX, float offsetY)
         {
             X += offsetX;
             Y += offsetY;
@@ -263,7 +263,7 @@ namespace YAFBCore.Utils.Mathematics
         /// <summary>Pushes the edges of the rectangle out by the horizontal and vertical values specified.</summary>
         /// <param name="horizontalAmount">Value to push the sides out by.</param>
         /// <param name="verticalAmount">Value to push the top and bottom out by.</param>
-        public void Inflate(float horizontalAmount, float verticalAmount)
+        internal void Inflate(float horizontalAmount, float verticalAmount)
         {
             X -= horizontalAmount;
             Y -= verticalAmount;
@@ -322,9 +322,10 @@ namespace YAFBCore.Utils.Mathematics
         /// <param name="value">The rectangle to evaluate.</param>
         public bool Intersects(RectangleF value)
         {
-            bool result;
-            Intersects(ref value, out result);
-            return result;
+            //bool result;
+            //Intersects(ref value, out result);
+            //return result;
+            return (value.X < Right) && (X < value.Right) && (value.Y < Bottom) && (Y < value.Bottom);
         }
 
         /// <summary>

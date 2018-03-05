@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace YAFBCore.Flattiverse.Mapping.Units
 {
-    public class MapUnit
+    public class MapUnit : IEquatable<MapUnit>
     {
         public readonly Map Map;
 
@@ -243,8 +243,8 @@ namespace YAFBCore.Flattiverse.Mapping.Units
         #endregion
 
         /// <summary>
-        /// Ages the unit
-        /// Performs orbiting calculations if the unit is orbiting
+        /// Ages the unit.
+        /// Performs orbiting calculations if the unit is orbiting.
         /// </summary>
         /// <returns>Return false if unit age reached AgeMax</returns>
         internal virtual bool Age()
@@ -312,6 +312,35 @@ namespace YAFBCore.Flattiverse.Mapping.Units
             sb.Append(")");
 
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public bool Equals(MapUnit other)
+        {
+            return other != null && Name == other.Name && Kind == other.Kind;
+        }
+
+        /// <summary>
+        /// Checks for equality of the object
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as MapUnit);
+        }
+
+        /// <summary>
+        /// Returns the hash code of this object
+        /// </summary>
+        /// <returns></returns>
+        public override int GetHashCode()
+        {
+            return (Name.GetHashCode() * 397) ^ (int)Kind;
         }
     }
 }
