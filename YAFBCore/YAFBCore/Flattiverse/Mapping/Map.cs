@@ -317,6 +317,8 @@ namespace YAFBCore.Flattiverse.Mapping
             if (isDisposed)
                 throw new InvalidOperationException("Map is already disposed");
 
+            isDisposed = true;
+
             mapSections = null;
             stillUnits = null;
 
