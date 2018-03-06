@@ -14,7 +14,7 @@ using YAFBCore.Utils.Mathematics;
 
 namespace YAFBCore.Flattiverse.Mapping
 {
-    public class Map : IDisposable
+    public class Map : IDisposable, IComparable<Map>
     {
         private static long counter = 0;
 
@@ -77,7 +77,7 @@ namespace YAFBCore.Flattiverse.Mapping
         private volatile bool isDisposed;
 
         /// <summary>
-        /// 
+        /// True when Dispose() was called
         /// </summary>
         public bool IsDisposed => isDisposed;
 
@@ -128,7 +128,7 @@ namespace YAFBCore.Flattiverse.Mapping
                 map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal.X, mapUnit.PositionInternal.Y)].AddOrUpdate(mapUnit);
 
                 if (mapUnit.Mobility == Mobility.Still)
-                    map.stillUnits[mapUnit.Name] = mapUnit;
+                    map.stillUnits.Add(mapUnit.Name, mapUnit);
             }
 
             mapUnit = MapUnitFactory.GetMapUnit(map, creator, movementOffset);
@@ -140,9 +140,8 @@ namespace YAFBCore.Flattiverse.Mapping
 
         #region Public functions
         /// <summary>
-        /// Execute before calling any functions who want to edit the map
-        /// Or if you want a consistent state of the map for a specific call
-        /// Locks map for current thread to edit
+        /// <para>Locks map for current thread to read/edit.</para>
+        /// Execute before calling any functions who want to read/edit the map, or if you want a consistent state of the map for a specific call
         /// </summary>
         public void BeginLock()
         {
@@ -166,10 +165,10 @@ namespace YAFBCore.Flattiverse.Mapping
         }
 
         /// <summary>
-        /// 
+        /// Tries to merge the two maps with each other
         /// </summary>
-        /// <param name="other"></param>
-        /// <returns></returns>
+        /// <param name="other">The other map to merge with</param>
+        /// <returns>Returns true if merge was successful</returns>
         public bool Merge(Map other)
         {
             if (isDisposed)
@@ -194,10 +193,11 @@ namespace YAFBCore.Flattiverse.Mapping
             
             for (int otherIndex = 0; otherIndex < other.mapSections.Length; otherIndex++)
             {
-                MapUnit[] array = other.mapSections[otherIndex].StillUnits;
+                MapSection mapSection = other.mapSections[otherIndex];
+                MapUnit[] array = mapSection.StillUnits;
                 addOrUpdateUnits(array, positionOffset);
 
-                for (int i = 0; i < array.Length; i++)
+                for (int i = 0; i < mapSection.StillUnits.Length; i++)
                 {
                     if (array[i] == null)
                         break;
@@ -213,8 +213,8 @@ namespace YAFBCore.Flattiverse.Mapping
                     }
                 }
 
-                addOrUpdateUnits(other.mapSections[otherIndex].AgingUnits, positionOffset);
-                addOrUpdateUnits(other.mapSections[otherIndex].PlayerUnits, positionOffset);
+                addOrUpdateUnits(mapSection.AgingUnits, positionOffset);
+                addOrUpdateUnits(mapSection.PlayerUnits, positionOffset);
             }
 
             return true;
@@ -229,7 +229,7 @@ namespace YAFBCore.Flattiverse.Mapping
                 throw new InvalidOperationException("Map is already disposed");
 
             if (!isLocked)
-                throw new InvalidOperationException("Please acquire a lock on this map before trying to age it");
+                throw new InvalidOperationException("Please acquire a lock on this map");
 
             for (int i = 0; i < mapSections.Length; i++)
             {
@@ -264,7 +264,7 @@ namespace YAFBCore.Flattiverse.Mapping
                 throw new InvalidOperationException("Map is already disposed");
 
             if (!isLocked)
-                throw new InvalidOperationException("Please acquire a lock on this map before trying to age it");
+                throw new InvalidOperationException("Please acquire a lock on this map");
 
             List<MapUnit> mapUnits = new List<MapUnit>(300);
             for (int i = getMapSectionIndex(viewport.Left, viewport.Top); i < getMapSectionIndex(viewport.Bottom, viewport.Right); i++)
@@ -286,6 +286,27 @@ namespace YAFBCore.Flattiverse.Mapping
             }
 
             return mapUnits;
+        }
+
+        /// <summary>
+        /// Used for sorting maps.
+        /// <para>Sort Type: DESC</para>
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public int CompareTo(Map other)
+        {
+            if (isDisposed)
+                throw new InvalidOperationException("Map is already disposed");
+
+            if (!isLocked)
+                throw new InvalidOperationException("Please acquire a lock on this map");
+
+            if (other == null)
+                return -1;
+
+            // Sort it desc
+            return -unitCount().CompareTo(other.unitCount());
         }
 
         /// <summary>
@@ -312,7 +333,7 @@ namespace YAFBCore.Flattiverse.Mapping
                 throw new InvalidOperationException("Map is already disposed");
 
             if (!isLocked)
-                throw new InvalidOperationException("Please acquire a lock on this map before trying to age it");
+                throw new InvalidOperationException("Please acquire a lock on this map");
 
             StringBuilder sb = new StringBuilder();
 
@@ -441,6 +462,20 @@ namespace YAFBCore.Flattiverse.Mapping
 
                 mapSections[getMapSectionIndex(mapUnit.PositionInternal)].AddOrUpdate(mapUnit);
             }
+        }
+
+        /// <summary>
+        /// Calculates the current unit count in this map
+        /// Does not take into account if units are unique
+        /// </summary>
+        /// <returns>Total amount if units</returns>
+        private int unitCount()
+        {
+            int count = 0;
+            for (int i = 0; i < mapSections.Length; i++)
+                count += mapSections[i].StillCount + mapSections[i].AgingCount + mapSections[i].PlayerCount;
+
+            return count;
         }
         #endregion
     }

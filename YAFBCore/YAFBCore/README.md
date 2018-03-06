@@ -15,3 +15,6 @@ Below is a list of current known issues/features who are set to be worked on
 - enlargeArray() code needs benchmarking with and without Array.Copy
 - Sorting of all arrays needs to be done efficiently (What sort criteria? etc.)
 -- Still- and AgingUnits done, PlayerUnits still not clear how to sort
+
+# TODO Today
+- Create MapManager

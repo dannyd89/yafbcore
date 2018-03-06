@@ -11,9 +11,9 @@ namespace YAFBCore.Flattiverse.Networking
     {
         private readonly Connection Parent;
 
-        private readonly UniverseGroup UniverseGroup;
-        private readonly string Name;
-        private readonly Team Team;
+        public readonly UniverseGroup UniverseGroup;
+        public readonly string Name;
+        public readonly Team Team;
 
         private List<UniverseGroupFlowControlWrapper> flowControls;
 
@@ -22,10 +22,7 @@ namespace YAFBCore.Flattiverse.Networking
         #region IsDisposed
         private volatile bool isDisposed;
 
-        public bool IsDisposed
-        {
-            get { return isDisposed; }
-        }
+        public bool IsDisposed => isDisposed;
         #endregion
 
         /// <summary>
@@ -126,7 +123,7 @@ namespace YAFBCore.Flattiverse.Networking
                     return UniverseGroup.RegisterShip(shipClass, shipName);
                 }
 
-            throw new InvalidOperationException("Can't create flow control on a disposed universe session");
+            throw new InvalidOperationException("Can't create a ship on a disposed universe session");
         }
 
         /// <summary>
