@@ -19,18 +19,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Flattiverse\Mapping\Units\GenerateUnits.tt">
+    <None Update="Mapping\Units\GenerateUnits.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>GenerateUnits.cs</LastGenOutput>
     </None>
-    <None Update="Flattiverse\Mapping\Units\SaveUnit.tt">
+    <None Update="Mapping\Units\SaveUnit.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
     </None>
-    <None Update="Flattiverse\Messaging\Listeners\GenerateListener.tt">
+    <None Update="Messaging\Listeners\GenerateListener.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>GenerateListener.cs</LastGenOutput>
     </None>
-    <None Update="Flattiverse\Messaging\Listeners\SaveListener.tt">
+    <None Update="Messaging\Listeners\SaveListener.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
     </None>
   </ItemGroup>
@@ -40,12 +40,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Flattiverse\Mapping\Units\GenerateUnits.cs">
+    <Compile Update="Mapping\Units\GenerateUnits.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>GenerateUnits.tt</DependentUpon>
     </Compile>
-    <Compile Update="Flattiverse\Messaging\Listeners\GenerateListener.cs">
+    <Compile Update="Messaging\Listeners\GenerateListener.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>GenerateListener.tt</DependentUpon>

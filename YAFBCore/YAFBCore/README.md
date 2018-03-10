@@ -17,4 +17,4 @@ Below is a list of current known issues/features who are set to be worked on
 -- Still- and AgingUnits done, PlayerUnits still not clear how to sort
 
 # TODO Today
-- Create MapManager
+- Create Controllables Namespace with Manager and Ship

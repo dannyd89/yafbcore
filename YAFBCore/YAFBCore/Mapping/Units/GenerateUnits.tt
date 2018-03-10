@@ -1,0 +1,42 @@
+﻿<#@ assembly name="System.Core" #>
+<#@ assembly name="$(SolutionDir)Connector.dll" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Flattiverse" #>
+<#@ include file="SaveUnit.tt" #>
+
+<# 
+foreach (UnitKind unitKind in Enum.GetValues(typeof(UnitKind)))
+{
+	var rawName = unitKind.ToString();
+	var rawNameVar = Char.ToLowerInvariant(rawName[0]).ToString() + rawName.Substring(1);
+	var name = rawName + "MapUnit";
+	GenerateUnit(rawName, rawNameVar, name);
+	SaveOutput(name + ".cs");
+}
+#>
+
+<#+
+void GenerateUnit(string rawName, string rawNameVar, string unitName)
+{
+#>
+using System;
+using Flattiverse;
+
+namespace YAFBCore.Mapping.Units
+{
+	public class <#= unitName #> : MapUnit
+	{
+		private <#= rawName #> <#= rawNameVar #>;
+	
+		public <#= unitName #>(Map map, <#= rawName #> <#= rawNameVar #>, Vector movementOffset)
+			: base(map, <#= rawNameVar #>, movementOffset)
+		{
+			this.<#= rawNameVar #> = <#= rawNameVar #>;
+		}
+	}
+}
+<#+ 
+}
+#>

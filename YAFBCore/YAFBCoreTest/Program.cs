@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using YAFBCore.Flattiverse.Mapping;
-using YAFBCore.Flattiverse.Networking;
+using YAFBCore.Mapping;
+using YAFBCore.Networking;
 
 namespace YAFBCoreTest
 {
