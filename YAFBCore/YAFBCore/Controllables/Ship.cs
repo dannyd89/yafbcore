@@ -13,7 +13,7 @@ namespace YAFBCore.Controllables
         /// Is called when ship isActive state is set to false
         /// We want to reregister this ship then in the manager
         /// </summary>
-        public event EventHandler ShipActiveStateChanged;
+        public event EventHandler ActiveStateChanged;
         #endregion
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace YAFBCore.Controllables
             {
                 if (!ship.IsActive)
                 {
-                    ShipActiveStateChanged?.Invoke(this, EventArgs.Empty);
+                    ActiveStateChanged?.Invoke(this, EventArgs.Empty);
                     return false;
                 }
 
@@ -58,9 +58,67 @@ namespace YAFBCore.Controllables
             }
         }
 
+        /// <see cref="Controllable.worker"/>
         protected override void worker()
         {
-            throw new NotImplementedException();
+            while (!isDisposed)
+            {
+                try
+                {
+                    flowControl.FlowControl.PreWait();
+
+                    scan();
+
+                    move();
+
+                    shoot();
+
+                    flowControl.FlowControl.Commit();
+                }
+                catch (Exception ex)
+                {
+                    if (isDisposed)
+                        return;
+
+                    Debug.WriteLine(ex.Message);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected override void scan()
+        {
+            base.scan();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected override void move()
+        {
+            base.move();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        protected override void shoot()
+        {
+            base.shoot();
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            try
+            {
+                // We try to close the ship if it's still active
+                ship.Close();
+            }
+            catch { }
         }
     }
 }

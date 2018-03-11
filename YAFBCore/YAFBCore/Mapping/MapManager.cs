@@ -11,16 +11,6 @@ namespace YAFBCore.Mapping
     public class MapManager : IDisposable
     {
         /// <summary>
-        /// List of all map managers
-        /// </summary>
-        private static Dictionary<string, MapManager> Managers = new Dictionary<string, MapManager>();
-
-        /// <summary>
-        /// Used to synchronize the Managers field
-        /// </summary>
-        private static object staticSyncObj = new object();
-
-        /// <summary>
         /// The session this manager was created in
         /// </summary>
         public readonly UniverseSession UniverseSession;
@@ -70,7 +60,7 @@ namespace YAFBCore.Mapping
         /// Creates a map manager
         /// </summary>
         /// <param name="universeGroup"></param>
-        private MapManager(UniverseSession universeSession)
+        internal MapManager(UniverseSession universeSession)
         {
             UniverseSession = universeSession;
             UniverseGroup = universeSession.UniverseGroup;
@@ -90,51 +80,17 @@ namespace YAFBCore.Mapping
         }
 
         /// <summary>
-        /// Either creates a new map manager if there isnt one for this universe group, else returns an existing one
-        /// </summary>
-        /// <param name="universeSession">Universe group where the session is running on</param>
-        /// <returns>Returns a map manager</returns>
-        internal static MapManager Create(UniverseSession universeSession)
-        {
-            lock (staticSyncObj)
-            {
-                MapManager mapManager;
-                if (Managers.TryGetValue(universeSession.UniverseGroup.Name, out mapManager))
-                    return mapManager;
-
-                mapManager = new MapManager(universeSession);
-                Managers.Add(universeSession.Name, mapManager);
-
-                return mapManager;
-            }
-        }
-
-        /// <summary>
-        /// Returns the map manager responsible for the passed universe group
-        /// </summary>
-        /// <param name="universeGroupName"></param>
-        /// <returns>True if manager was found</returns>
-        public static bool TryGetManager(string universeGroupName, out MapManager mapManager)
-        {
-            lock (staticSyncObj)
-                return Managers.TryGetValue(universeGroupName, out mapManager);
-        }
-
-        /// <summary>
         /// Disposes this map manager
         /// </summary>
         public void Dispose()
         {
-            if (isDisposed)
-                throw new InvalidOperationException("MapManager is already disposed");
-
-            isDisposed = true;
-
-            lock (staticSyncObj)
-                Managers.Remove(UniverseGroup.Name);
-
             lock (syncObj)
             {
+                if (isDisposed)
+                    throw new ObjectDisposedException("MapManager is already disposed");
+
+                isDisposed = true;
+
                 UniverseSession.RemoveFlowControl(flowControl);
                 waitEvent.Dispose();
             }
@@ -146,11 +102,13 @@ namespace YAFBCore.Mapping
         /// <param name="map"></param>
         internal void Add(Map map)
         {
-            if (isDisposed)
-                throw new InvalidOperationException("MapManager is already disposed");
-
             lock (syncObj)
+            {
+                if (isDisposed)
+                    throw new ObjectDisposedException("MapManager is already disposed");
+
                 sortedMaps[map.Universe.Name].Add(map);
+            }
         }
 
         /// <summary>
@@ -159,7 +117,7 @@ namespace YAFBCore.Mapping
         internal void Wait()
         {
             if (isDisposed)
-                throw new InvalidOperationException("MapManager is already disposed");
+                throw new ObjectDisposedException("MapManager is already disposed");
 
             waitEvent.Wait();
         }
@@ -169,10 +127,10 @@ namespace YAFBCore.Mapping
         /// </summary>
         private void worker()
         {
-            while (true)
+            while (!isDisposed)
                 try
                 {
-                    flowControl.PreWait();
+                    flowControl.FlowControl.PreWait();
 
                     lock (syncObj)
                         foreach (KeyValuePair<string, List<Map>> kvp in sortedMaps)
@@ -245,7 +203,7 @@ namespace YAFBCore.Mapping
                     // Manager is done
                     waitEvent.Set();
 
-                    flowControl.Commit();
+                    flowControl.FlowControl.Commit();
                 }
                 catch
                 {

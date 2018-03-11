@@ -1,22 +1,63 @@
-﻿using Flattiverse;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using YAFBCore.Controllables;
+using YAFBCore.Mapping;
 
 namespace YAFBCore.Networking
 {
     public class UniverseSession : IDisposable
     {
+        /// <summary>
+        /// Internal id counter
+        /// </summary>
+        private static long counter = 0;
+
+        /// <summary>
+        /// Id of this session
+        /// </summary>
+        public readonly long Id;
+
+        /// <summary>
+        /// Active connection
+        /// </summary>
         private readonly Connection Parent;
 
-        public readonly UniverseGroup UniverseGroup;
-        public readonly string Name;
-        public readonly Team Team;
+        /// <summary>
+        /// Use this manager to create and manage all your controllables
+        /// </summary>
+        public readonly ControllablesManager ControllablesManager;
 
+        /// <summary>
+        /// Use this manager to get units from the current stored maps
+        /// </summary>
+        public readonly MapManager MapManager;
+
+        /// <summary>
+        /// Active universe group
+        /// </summary>
+        public readonly Flattiverse.UniverseGroup UniverseGroup;
+
+        /// <summary>
+        /// Name of the active player
+        /// </summary>
+        public readonly string Name;
+
+        /// <summary>
+        /// The chosen team
+        /// </summary>
+        public readonly Flattiverse.Team Team;
+
+        /// <summary>
+        /// List of all active flow controls
+        /// </summary>
         private List<UniverseGroupFlowControlWrapper> flowControls;
 
+        /// <summary>
+        /// 
+        /// </summary>
         private object syncObject = new object();
 
         #region IsDisposed
@@ -32,37 +73,25 @@ namespace YAFBCore.Networking
         /// <param name="universeGroup">The universe group to join</param>
         /// <param name="name">The name to use to join this session</param>
         /// <param name="team">The team to join</param>
-        internal UniverseSession(Connection parent, UniverseGroup universeGroup, string name, Team team)
-        {
-            Parent = parent;
-
-            UniverseGroup = universeGroup;
-            Name = name;
-            Team = team;
-
-            universeGroup.Join(name, team);
-
-            flowControls = new List<UniverseGroupFlowControlWrapper>();
-        }
-
-        /// <summary>
-        /// A universe session to manage all data for this universe
-        /// </summary>
-        /// <param name="parent">The parent connection to join this session</param>
-        /// <param name="universeGroup">The universe group to join</param>
-        /// <param name="name">The name to use to join this session</param>
-        /// <param name="team">The team to join</param>
         /// <param name="clan">The clan name to use</param>
         /// <param name="password">The password of the universe group</param>
-        internal UniverseSession(Connection parent, UniverseGroup universeGroup, string name, Team team, string clan, string password)
+        internal UniverseSession(Connection parent, Flattiverse.UniverseGroup universeGroup, string name, Flattiverse.Team team, string clan = null, string password = null)
         {
+            Id = counter++;
+
             Parent = parent;
 
             UniverseGroup = universeGroup;
             Name = name;
             Team = team;
 
-            universeGroup.Join(name, team, clan, password);
+            if (universeGroup.PasswordRequired)
+                universeGroup.Join(name, team, clan, password);
+            else
+                universeGroup.Join(name, team);
+
+            ControllablesManager = new ControllablesManager(this);
+            MapManager = new MapManager(this);
 
             flowControls = new List<UniverseGroupFlowControlWrapper>();
         }
@@ -75,17 +104,17 @@ namespace YAFBCore.Networking
         /// <returns></returns>
         public UniverseGroupFlowControlWrapper CreateFlowControl()
         {
-            if (!isDisposed)
-                lock (syncObject)
-                {
-                    UniverseGroupFlowControlWrapper flowControl = new UniverseGroupFlowControlWrapper(UniverseGroup.GetNewFlowControl());
-                
-                    flowControls.Add(flowControl);
+            lock (syncObject)
+            {
+                if (isDisposed)
+                    throw new ObjectDisposedException("UniverseSession is already disposed");
 
-                    return flowControl;
-                }
+                UniverseGroupFlowControlWrapper flowControl = new UniverseGroupFlowControlWrapper(UniverseGroup.GetNewFlowControl());
 
-            throw new InvalidOperationException("Can't create flow control on a disposed universe session");
+                flowControls.Add(flowControl);
+
+                return flowControl;
+            }
         }
 
         /// <summary>
@@ -96,6 +125,9 @@ namespace YAFBCore.Networking
         {
             lock (syncObject)
             {
+                if (isDisposed)
+                    throw new ObjectDisposedException("UniverseSession is already disposed");
+
                 int count = flowControls.Count;
 
                 for (int i = 0; i < count; i++)
@@ -110,31 +142,20 @@ namespace YAFBCore.Networking
         }
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="shipName"></param>
-        /// <param name="shipClass"></param>
-        /// <returns></returns>
-        public Ship CreateShip(string shipClass, string shipName)
-        {
-            if (!isDisposed)
-                lock (syncObject)
-                {
-                    return UniverseGroup.RegisterShip(shipClass, shipName);
-                }
-
-            throw new InvalidOperationException("Can't create a ship on a disposed universe session");
-        }
-
-        /// <summary>
         /// Disposes all information and leaves the universe
         /// </summary>
         public void Dispose()
         {
-            isDisposed = true;
-
             lock (syncObject)
             {
+                if (isDisposed)
+                    throw new ObjectDisposedException("UniverseSession is already disposed");
+
+                isDisposed = true;
+
+                ControllablesManager.Dispose();
+                MapManager.Dispose();
+
                 foreach (var flowControl in flowControls)
                     flowControl.Dispose();
 
