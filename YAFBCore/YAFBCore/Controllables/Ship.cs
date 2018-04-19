@@ -21,6 +21,19 @@ namespace YAFBCore.Controllables
         /// </summary>
         private Flattiverse.Ship ship;
 
+        #region Scanning Fields
+        /// <summary>
+        /// Current degree the scanner is at
+        /// </summary>
+        private float currentScanDegree;
+
+        /// <summary>
+        /// Scan reference is a position of a still unit which is used as a reference point for the next scan
+        /// This is used to always have at least one
+        /// </summary>
+        private Flattiverse.Vector scanReference;
+        #endregion
+
         /// <summary>
         /// 
         /// </summary>
@@ -33,6 +46,7 @@ namespace YAFBCore.Controllables
 
         /// <summary>
         /// Continues the ship if possible
+        /// <para>Can trigger ActiveStateChanged event if IsActive is false</para>
         /// </summary>
         /// <returns>True if continue was successful</returns>
         public bool TryContinue()
@@ -58,7 +72,9 @@ namespace YAFBCore.Controllables
             }
         }
 
-        /// <see cref="Controllable.worker"/>
+        /// <summary>
+        /// 
+        /// </summary>
         protected override void worker()
         {
             while (!isDisposed)
@@ -80,17 +96,63 @@ namespace YAFBCore.Controllables
                     if (isDisposed)
                         return;
 
+                    Debug.WriteLine($"{ship.Name}: Worker Exception");
                     Debug.WriteLine(ex.Message);
                 }
             }
         }
 
         /// <summary>
-        /// 
+        /// Performs a scan with the ship
         /// </summary>
         protected override void scan()
         {
-            base.scan();
+            try
+            {
+                List<Flattiverse.ScanInfo> scanInfos = new List<Flattiverse.ScanInfo>();
+
+                int scannerCount = ship.ScannerCount;
+
+                if (scanReference != null)
+                {
+                    // We got a reference point so we scan in that direction with a minimal degree because we know the direction
+                    float oneFourthDegree = Math.Min(10f, ship.ScannerDegreePerScan / 4f);
+
+                    scanInfos.Add(new Flattiverse.ScanInfo(scanReference.Angle - oneFourthDegree, 
+                                                           scanReference.Angle + oneFourthDegree, 
+                                                           ship.ScannerArea.Limit * 0.99f));
+
+                    --scannerCount;
+                }
+                
+                for (int i = 0; i < scannerCount; i++)
+                {
+                    Flattiverse.ScanInfo scanInfo = new Flattiverse.ScanInfo(currentScanDegree, currentScanDegree + ship.ScannerDegreePerScan, ship.ScannerArea.Limit * 0.99f);
+
+                    currentScanDegree += ship.ScannerDegreePerScan;
+
+                    if (currentScanDegree >= 360f)
+                        currentScanDegree -= 360f;
+
+                    scanInfos.Add(scanInfo);
+                }
+
+                List<Flattiverse.Unit> scannedUnits = ship.Scan(scanInfos);
+
+                scanReference = null;
+
+                // Get the nearest still unit as reference point
+                for (int i = 0; i < scannedUnits.Count; i++)
+                    if (scannedUnits[i].Mobility == Flattiverse.Mobility.Still
+                        && scannedUnits[i].Kind != Flattiverse.UnitKind.Explosion
+                        && (scanReference == null || scannedUnits[i].Position.Length < scanReference.Length))
+                        scanReference = scannedUnits[i].Position;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"{ship.Name}: Scan Exception");
+                Debug.WriteLine(ex.Message);
+            }
         }
 
         /// <summary>
@@ -102,13 +164,16 @@ namespace YAFBCore.Controllables
         }
 
         /// <summary>
-        /// 
+        /// Shoots with the ship
         /// </summary>
         protected override void shoot()
         {
             base.shoot();
         }
 
+        /// <summary>
+        /// Disposes the ship
+        /// </summary>
         public override void Dispose()
         {
             base.Dispose();

@@ -120,6 +120,9 @@ namespace YAFBCore.Controllables
         /// </summary>
         public virtual void Dispose()
         {
+            if (isDisposed)
+                throw new ObjectDisposedException("Controllable is already disposed");
+
             isDisposed = true;
 
             while (workerThread.ThreadState == ThreadState.Running)
