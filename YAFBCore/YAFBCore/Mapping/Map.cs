@@ -195,22 +195,22 @@ namespace YAFBCore.Mapping
             for (int otherIndex = 0; otherIndex < other.mapSections.Length; otherIndex++)
             {
                 MapSection mapSection = other.mapSections[otherIndex];
-                MapUnit[] array = mapSection.StillUnits;
-                addOrUpdateUnits(array, positionOffset);
+                MapUnit[] tempStillUnits = mapSection.StillUnits;
+                addOrUpdateUnits(tempStillUnits, positionOffset);
 
-                for (int i = 0; i < mapSection.StillUnits.Length; i++)
+                for (int i = 0; i < tempStillUnits.Length; i++)
                 {
-                    if (array[i] == null)
+                    if (tempStillUnits[i] == null)
                         break;
 
-                    if (!stillUnits.TryGetValue(array[i].Name, out mapUnit))
+                    if (!stillUnits.TryGetValue(tempStillUnits[i].Name, out mapUnit))
                     {
-                        array[i].PositionInternal = positionOffset + array[i].PositionInternal;
+                        tempStillUnits[i].PositionInternal = positionOffset + tempStillUnits[i].PositionInternal;
 
-                        if (array[i].IsOrbiting)
-                            array[i].OrbitingCenter = positionOffset + array[i].OrbitingCenter;
+                        if (tempStillUnits[i].IsOrbiting)
+                            tempStillUnits[i].OrbitingCenter = positionOffset + tempStillUnits[i].OrbitingCenter;
 
-                        stillUnits.Add(array[i].Name, array[i]);
+                        stillUnits.Add(tempStillUnits[i].Name, tempStillUnits[i]);
                     }
                 }
 
@@ -474,6 +474,7 @@ namespace YAFBCore.Mapping
         /// <returns>Total amount if units</returns>
         private int unitCount()
         {
+            // TODO: Check if this is called too often, can be a performance problem
             int count = 0;
             for (int i = 0; i < mapSections.Length; i++)
                 count += mapSections[i].StillCount + mapSections[i].AgingCount + mapSections[i].PlayerCount;

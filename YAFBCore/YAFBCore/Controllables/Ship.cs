@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using YAFBCore.Networking;
 
 namespace YAFBCore.Controllables
@@ -32,6 +33,25 @@ namespace YAFBCore.Controllables
         /// This is used to always have at least one
         /// </summary>
         private Flattiverse.Vector scanReference;
+
+        /// <summary>
+        /// Waiter which can be used to know if this ship has successfully performed its scan
+        /// </summary>
+        internal ManualResetEventSlim ScanWaiter = new ManualResetEventSlim(false);
+        #endregion
+
+        #region Moving Fields
+        /// <summary>
+        /// Waiter which can be used to know if this ship has successfully performed its move
+        /// </summary>
+        internal ManualResetEventSlim MoveWaiter = new ManualResetEventSlim(false);
+        #endregion
+
+        #region Shooting Fields
+        /// <summary>
+        /// Waiter which can be used to know if this ship has successfully performed its shots
+        /// </summary>
+        internal ManualResetEventSlim ShootWaiter = new ManualResetEventSlim(false);
         #endregion
 
         /// <summary>
@@ -81,15 +101,26 @@ namespace YAFBCore.Controllables
             {
                 try
                 {
+                    // Wait for the game to calculate the next tick
                     flowControl.FlowControl.PreWait();
 
+                    // Scan and wait
                     scan();
 
+                    // Let the map manager process all the scanned info
+                    Session.MapManager.Wait();
+
+                    // Perform any move command if available
                     move();
 
+                    // Perform any shoot command if available
                     shoot();
 
+                    // Commit actions queued this tick
                     flowControl.FlowControl.Commit();
+
+                    // Reset all waiters
+                    resetWaiters();
                 }
                 catch (Exception ex)
                 {
@@ -100,6 +131,16 @@ namespace YAFBCore.Controllables
                     Debug.WriteLine(ex.Message);
                 }
             }
+        }
+
+        /// <summary>
+        /// Resets all the waiters of this ship
+        /// </summary>
+        private void resetWaiters()
+        {
+            ScanWaiter.Reset();
+            MoveWaiter.Reset();
+            ShootWaiter.Reset();
         }
 
         /// <summary>
@@ -147,11 +188,17 @@ namespace YAFBCore.Controllables
                         && scannedUnits[i].Kind != Flattiverse.UnitKind.Explosion
                         && (scanReference == null || scannedUnits[i].Position.Length < scanReference.Length))
                         scanReference = scannedUnits[i].Position;
+
+                Session.MapManager.Add(Mapping.Map.Create(ship, scannedUnits));
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"{ship.Name}: Scan Exception");
                 Debug.WriteLine(ex.Message);
+            }
+            finally
+            {
+                ScanWaiter.Set();
             }
         }
 
@@ -160,7 +207,19 @@ namespace YAFBCore.Controllables
         /// </summary>
         protected override void move()
         {
-            base.move();
+            try
+            {
+                
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"{ship.Name}: Move Exception");
+                Debug.WriteLine(ex.Message);
+            }
+            finally
+            {
+                MoveWaiter.Set();
+            }
         }
 
         /// <summary>
@@ -168,7 +227,19 @@ namespace YAFBCore.Controllables
         /// </summary>
         protected override void shoot()
         {
-            base.shoot();
+            try
+            {
+
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"{ship.Name}: Shoot Exception");
+                Debug.WriteLine(ex.Message);
+            }
+            finally
+            {
+                ShootWaiter.Set();
+            }
         }
 
         /// <summary>
@@ -180,6 +251,8 @@ namespace YAFBCore.Controllables
 
             try
             {
+                ScanWaiter.Dispose();
+
                 // We try to close the ship if it's still active
                 ship.Close();
             }

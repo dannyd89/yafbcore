@@ -31,10 +31,17 @@ namespace YAFBCore.Mapping
         /// </summary>
         public readonly Map Parent;
 
+        #region Bounds
         /// <summary>
         /// Bounds of this section
         /// </summary>
         public readonly RectangleF Bounds;
+
+        public float Left => Bounds.Left;
+        public float Top => Bounds.Top;
+        public float Right => Bounds.Right;
+        public float Bottom => Bounds.Bottom;
+        #endregion
 
         /// <summary>
         /// Holds all the still units in this section
@@ -87,7 +94,7 @@ namespace YAFBCore.Mapping
         /// <param name="parent">Parent of this section</param>
         public MapSection(Map parent, RectangleF bounds)
         {
-            Parent = parent;
+            Parent = parent ?? throw new ArgumentNullException(nameof(parent));
             Bounds = bounds;
         }
 

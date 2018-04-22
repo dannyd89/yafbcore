@@ -13,7 +13,7 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// The session this manager was created in
         /// </summary>
-        public readonly UniverseSession UniverseSession;
+        public readonly UniverseSession Session;
 
         /// <summary>
         /// Active universe group for this manager
@@ -62,7 +62,7 @@ namespace YAFBCore.Mapping
         /// <param name="universeGroup"></param>
         internal MapManager(UniverseSession universeSession)
         {
-            UniverseSession = universeSession;
+            Session = universeSession;
             UniverseGroup = universeSession.UniverseGroup;
 
             flowControl = universeSession.CreateFlowControl();
@@ -91,7 +91,7 @@ namespace YAFBCore.Mapping
 
                 isDisposed = true;
 
-                UniverseSession.RemoveFlowControl(flowControl);
+                Session.RemoveFlowControl(flowControl);
                 waitEvent.Dispose();
             }
         }
@@ -132,6 +132,7 @@ namespace YAFBCore.Mapping
                 {
                     flowControl.FlowControl.PreWait();
 
+                    // Age the map because a tick has passed
                     lock (syncObj)
                         foreach (KeyValuePair<string, List<Map>> kvp in sortedMaps)
                             for (int i = 0; i < kvp.Value.Count; i++)
@@ -144,10 +145,10 @@ namespace YAFBCore.Mapping
                     // Used to signal that the manager wants to merge
                     waitEvent.Reset();
 
-                    // We dont need to call Wait() here because we need to wait for all the controllables anyway
-                    //flowControl.Wait();
-
-                    // TODO: We need to wait for all controllables to be done with scanning
+                    // Wait for all ships to finish
+                    var ships = Session.ControllablesManager.Ships;
+                    for (int i = 0; i < ships.Length; i++)
+                        ships[i].ScanWaiter.Wait();
 
                     lock (syncObj)
                         foreach (KeyValuePair<string, List<Map>> kvp in sortedMaps)
@@ -177,17 +178,18 @@ namespace YAFBCore.Mapping
                                                 list.RemoveAt(n);
 
                                                 merged = true;
-                                                Debug.WriteLine("Merge successful");
+                                                //Debug.WriteLine("Merge successful");
 
-                                                continue; // We need to continue since we disposed the map already and EndLock cant be called
+                                                // We need to continue since we disposed the map already and EndLock cant be called
+                                                continue; 
                                             }
-                                            else
-                                            {
-                                                Debug.WriteLine("Merge not successful");
+                                            //else
+                                            //{
+                                            //    Debug.WriteLine("Merge not successful");
 
-                                                list[i].DebugPrint();
-                                                list[n].DebugPrint();
-                                            }
+                                            //    list[i].DebugPrint();
+                                            //    list[n].DebugPrint();
+                                            //}
 
                                             list[n].EndLock();
                                         }
@@ -198,6 +200,7 @@ namespace YAFBCore.Mapping
 
                                 list.Sort();
                             }
+
                         }
 
                     // Manager is done

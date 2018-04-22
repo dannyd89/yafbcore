@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
 using YAFBCore.Networking;
@@ -21,9 +22,7 @@ namespace YAFBCore.Controllables
         /// <summary>
         /// List of all ships
         /// </summary>
-        private List<Ship> ships;
-
-        // TODO: Add other controllable types
+        public ImmutableArray<Ship> Ships; 
 
         /// <summary>
         /// Lockable object
@@ -36,7 +35,7 @@ namespace YAFBCore.Controllables
         #endregion
 
         /// <summary>
-        /// Creates a manager which holds all controllables of a player
+        /// Creates a thread-safe manager which holds all controllables of a player
         /// </summary>
         /// <param name="universeGroup"></param>
         internal ControllablesManager(UniverseSession universeSession)
@@ -44,7 +43,7 @@ namespace YAFBCore.Controllables
             Session = universeSession;
             universeGroup = universeSession.UniverseGroup;
 
-            ships = new List<Ship>(16);
+            Ships = ImmutableArray<Ship>.Empty;
         }
 
         /// <summary>
@@ -55,28 +54,25 @@ namespace YAFBCore.Controllables
         /// <returns></returns>
         public Ship CreateShip(string @class, string name)
         {
-            lock (syncObj)
+            if (isDisposed)
+                throw new ObjectDisposedException("ControllablesManager is already disposed");
+
+            try
             {
-                if (isDisposed)
-                    throw new ObjectDisposedException("ControllablesManager is already disposed");
+                Ship ship = new Ship(Session, universeGroup.RegisterShip(@class, name));
+                ship.ActiveStateChanged += ship_ActiveStateChanged;
+                Ships = Ships.Add(ship);
 
-                try
-                {
-                    Ship ship = new Ship(Session, universeGroup.RegisterShip(@class, name));
-                    ship.ActiveStateChanged += ship_ActiveStateChanged;
-                    ships.Add(ship);
+                return ship;
+            }
+            catch (Flattiverse.GameException gameException)
+            {
+                Debug.WriteLine(gameException.ErrorNumber.ToString("X2"));
+                Debug.WriteLine(gameException.Message);
 
-                    return ship;
-                }
-                catch (Flattiverse.GameException gameException)
-                {
-                    Debug.WriteLine(gameException.ErrorNumber.ToString("X2"));
-                    Debug.WriteLine(gameException.Message);
+                // TODO: Own exception type so we dont throw a Flattiverse Exception outside
 
-                    // TODO: Own exception type so we dont throw a Flattiverse Exception outside
-
-                    return null;
-                }
+                return null;
             }
         }
 
@@ -87,11 +83,8 @@ namespace YAFBCore.Controllables
         /// <param name="e"></param>
         private void ship_ActiveStateChanged(object sender, EventArgs e)
         {
-            lock (syncObj)
-            {
-                if (!isDisposed)
-                    TryRemoveShip(((Ship)sender).Name);
-            }
+            if (!isDisposed)
+                TryRemoveShip(((Ship)sender).Name);
         }
 
         /// <summary>
@@ -102,22 +95,19 @@ namespace YAFBCore.Controllables
         /// <returns>True if ship was found</returns>
         public bool TryGetShip(string name, out Ship ship)
         {
-            lock (syncObj)
-            {
-                if (isDisposed)
-                    throw new ObjectDisposedException("ControllablesManager is already disposed");
+            if (isDisposed)
+                throw new ObjectDisposedException("ControllablesManager is already disposed");
 
-                int count = ships.Count;
-                for (int i = 0; i < count; i++)
-                    if (ships[i].Name == name)
-                    {
-                        ship = ships[i];
-                        return true;
-                    }
+            var tempShips = Ships;
+            for (int i = 0; i < tempShips.Length; i++)
+                if (tempShips[i].Name == name)
+                {
+                    ship = tempShips[i];
+                    return true;
+                }
 
-                ship = null;
-                return true;
-            }
+            ship = null;
+            return true;
         }
 
         /// <summary>
@@ -127,23 +117,20 @@ namespace YAFBCore.Controllables
         /// <returns>True if ship was found and removed</returns>
         public bool TryRemoveShip(string name)
         {
-            lock (syncObj)
-            {
-                if (isDisposed)
-                    throw new ObjectDisposedException("ControllablesManager is already disposed");
+            if (isDisposed)
+                throw new ObjectDisposedException("ControllablesManager is already disposed");
 
-                int count = ships.Count;
-                for (int i = 0; i < count; i++)
-                    if (ships[i].Name == name)
-                    {
-                        ships[i].Dispose();
+            var tempShips = Ships;
+            for (int i = 0; i < tempShips.Length; i++)
+                if (tempShips[i].Name == name)
+                {
+                    tempShips[i].Dispose();
 
-                        ships.RemoveAt(i);
-                        return true;
-                    }
-                
-                return false;
-            }
+                    Ships = tempShips.RemoveAt(i);
+                    return true;
+                }
+
+            return false;
         }
 
         /// <summary>
@@ -151,16 +138,15 @@ namespace YAFBCore.Controllables
         /// </summary>
         public void Dispose()
         {
-            lock (syncObj)
-            {
-                if (isDisposed)
-                    throw new ObjectDisposedException("ControllablesManager is already disposed");
+            if (isDisposed)
+                throw new ObjectDisposedException("ControllablesManager is already disposed");
 
-                isDisposed = true;
+            isDisposed = true;
 
-                foreach (Ship ship in ships)
-                    ship.Dispose();
-            }
+            foreach (Ship ship in Ships)
+                ship.Dispose();
+
+            Ships = ImmutableArray<Ship>.Empty;
         }
     }
 }
