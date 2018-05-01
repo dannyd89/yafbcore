@@ -89,6 +89,11 @@ namespace YAFBCore.Mapping
         public int PlayerCount => playerCount;
 
         /// <summary>
+        /// Raster list for each size
+        /// </summary>
+        private Dictionary<int, MapSectionRaster> rasterList = new Dictionary<int, MapSectionRaster>();
+
+        /// <summary>
         /// Creates a map section
         /// </summary>
         /// <param name="parent">Parent of this section</param>
@@ -175,6 +180,15 @@ namespace YAFBCore.Mapping
             {
                 // TODO: PlayerUnits sorter
             }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="tileSize"></param>
+        public void Rasterize(int tileSize)
+        {
+            rasterList[tileSize] = MapSectionRasterizer.Rasterize(this, tileSize);
         }
 
         /// <summary>
