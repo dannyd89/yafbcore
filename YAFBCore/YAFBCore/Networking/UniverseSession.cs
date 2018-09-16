@@ -90,10 +90,10 @@ namespace YAFBCore.Networking
             else
                 universeGroup.Join(name, team);
 
+            flowControls = new List<UniverseGroupFlowControlWrapper>();
+
             ControllablesManager = new ControllablesManager(this);
             MapManager = new MapManager(this);
-
-            flowControls = new List<UniverseGroupFlowControlWrapper>();
         }
 
         /// <summary>

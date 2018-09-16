@@ -266,7 +266,7 @@ namespace YAFBCore.Messaging
         /// <summary>
         /// Handles incoming messages
         /// </summary>
-        internal void ReadMessages()
+        public void ReadMessages()
         {
             FlattiverseMessage message;
 
@@ -499,6 +499,8 @@ namespace YAFBCore.Messaging
 
         private void RaiseOnMessage(SystemMessage systemMessage)
         {
+            System.Diagnostics.Debug.WriteLine($"Message: " + systemMessage.Message);
+
             SystemMessageReceived?.Invoke(this, systemMessage);
         }
 

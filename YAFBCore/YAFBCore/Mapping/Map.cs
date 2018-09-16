@@ -68,6 +68,11 @@ namespace YAFBCore.Mapping
         private AutoResetEvent lockMapEvent = new AutoResetEvent(true);
 
         /// <summary>
+        /// Id of the thread currently locking the map
+        /// </summary>
+        private int lockingThreadId;
+
+        /// <summary>
         /// States whether the map is locked or not
         /// </summary>
         private volatile bool isLocked = false;
@@ -101,41 +106,51 @@ namespace YAFBCore.Mapping
         /// <param name="units">Units which were scanned</param>
         public static Map Create(Controllable creator, List<Unit> units)
         {
-            Vector movementOffset = Vector.FromNull();
-            foreach (Unit unit in units)
-                if (unit.Kind != UnitKind.Explosion
-                    && unit.Mobility == Mobility.Still)
+            try
+            {
+                Vector movementOffset = Vector.FromNull();
+                foreach (Unit unit in units)
+                    if (unit.Kind != UnitKind.Explosion
+                        && unit.Mobility == Mobility.Still)
+                    {
+                        movementOffset = unit.Movement;
+                        break;
+                    }
+
+                //if (movementOffset.IsZeroVector())
+                //    return null;
+
+                Universe universe = creator.Universe;
+                string currentPlayerName = universe.Connector.Player.Name;
+
+                Map map = new Map(universe);
+
+                MapUnit mapUnit;
+                foreach (Unit unit in units)
                 {
-                    movementOffset = unit.Movement;
-                    break;
+                    if (unit is PlayerUnit playerUnit && playerUnit.Player.Name == currentPlayerName)
+                        continue;
+
+                    mapUnit = MapUnitFactory.GetMapUnit(map, unit, movementOffset);
+
+                    map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal.X, mapUnit.PositionInternal.Y)].AddOrUpdate(mapUnit);
+
+                    if (mapUnit.Mobility == Mobility.Still)
+                        map.stillUnits.Add(mapUnit.Name, mapUnit);
                 }
 
-            if (movementOffset.IsZeroVector())
-                return null;
+                mapUnit = MapUnitFactory.GetMapUnit(map, creator, movementOffset);
+                map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal)].AddOrUpdate(mapUnit);
 
-            Universe universe = creator.Universe;
-            string currentPlayerName = universe.Connector.Player.Name;
-
-            Map map = new Map(universe);
-
-            MapUnit mapUnit;
-            foreach (Unit unit in units)
-            {
-                if (unit is PlayerUnit playerUnit && playerUnit.Player.Name == currentPlayerName)
-                    continue;
-
-                mapUnit = MapUnitFactory.GetMapUnit(map, unit, movementOffset);
-
-                map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal.X, mapUnit.PositionInternal.Y)].AddOrUpdate(mapUnit);
-
-                if (mapUnit.Mobility == Mobility.Still)
-                    map.stillUnits.Add(mapUnit.Name, mapUnit);
+                return map;
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                Debug.WriteLine(ex.StackTrace);
 
-            mapUnit = MapUnitFactory.GetMapUnit(map, creator, movementOffset);
-            map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal)].AddOrUpdate(mapUnit);
-
-            return map;
+                return null;
+            }
         }
         #endregion
 
@@ -147,9 +162,11 @@ namespace YAFBCore.Mapping
         public void BeginLock()
         {
             if (isDisposed)
-                throw new InvalidOperationException("Map is already disposed");
+                throw new ObjectDisposedException("Map is already disposed");
 
             lockMapEvent.WaitOne();
+
+            lockingThreadId = Thread.CurrentThread.ManagedThreadId;
             isLocked = true;
         }
 
@@ -159,9 +176,11 @@ namespace YAFBCore.Mapping
         public void EndLock()
         {
             if (isDisposed)
-                throw new InvalidOperationException("Map is already disposed");
+                throw new ObjectDisposedException("Map is already disposed");
 
+            lockingThreadId = -1;
             isLocked = false;
+
             lockMapEvent.Set();
         }
 
@@ -170,13 +189,16 @@ namespace YAFBCore.Mapping
         /// </summary>
         /// <param name="other">The other map to merge with</param>
         /// <returns>Returns true if merge was successful</returns>
-        public bool Merge(Map other)
+        internal bool Merge(Map other)
         {
             if (isDisposed)
-                throw new InvalidOperationException("Map is already disposed");
+                throw new ObjectDisposedException("Map is already disposed");
 
             if (!isLocked || !other.isLocked)
                 throw new InvalidOperationException("Please acquire a lock on both maps before trying to merge them");
+
+            if (lockingThreadId != other.lockingThreadId || lockingThreadId != Thread.CurrentThread.ManagedThreadId)
+                throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
 
             Vector positionOffset = null;
 
@@ -224,13 +246,16 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// Ages the map for one tick.
         /// </summary>
-        public void Age()
+        internal void Age()
         {
             if (isDisposed)
                 throw new InvalidOperationException("Map is already disposed");
 
             if (!isLocked)
                 throw new InvalidOperationException("Please acquire a lock on this map");
+
+            if (lockingThreadId != Thread.CurrentThread.ManagedThreadId)
+                throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
 
             for (int i = 0; i < mapSections.Length; i++)
             {
@@ -256,10 +281,11 @@ namespace YAFBCore.Mapping
 
         /// <summary>
         /// Gets the units which are visible in the passed viewport
+        /// Maps needs to be locked before calling this
         /// </summary>
         /// <param name="viewport">Viewport which describes the area the game is currently looking at. It's highly advised to span the passed viewport a bit larger than the actual viewport.</param>
         /// <returns>A list of units which are contained in the viewport</returns>
-        public List<MapUnit> GetUnits(RectangleF viewport)
+        internal List<MapUnit> GetUnits(RectangleF viewport)
         {
             if (isDisposed)
                 throw new InvalidOperationException("Map is already disposed");
@@ -267,14 +293,22 @@ namespace YAFBCore.Mapping
             if (!isLocked)
                 throw new InvalidOperationException("Please acquire a lock on this map");
 
+            if (lockingThreadId != Thread.CurrentThread.ManagedThreadId)
+                throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
+
             List<MapUnit> mapUnits = new List<MapUnit>(300);
-            for (int i = getMapSectionIndex(viewport.Left, viewport.Top); i < getMapSectionIndex(viewport.Bottom, viewport.Right); i++)
+
+            int startIndex = getMapSectionIndex(viewport.Left, viewport.Top);
+            int maxIndex = getMapSectionIndex(viewport.Bottom, viewport.Right);
+
+            for (int i = startIndex; i <= maxIndex; i++)
             {
                 MapSection mapSection = mapSections[i];
 
                 if (mapSection.Bounds.Intersects(viewport))
                 {
-                    mapUnits.AddRange(mapSection.StillUnits);
+                    for (int x = 0; x < mapSection.StillCount; x++)
+                        mapUnits.Add(mapSection.StillUnits[x]);
 
                     for (int x = 0; x < mapSection.AgingCount; x++)
                         if (!mapUnits.Contains(mapSection.AgingUnits[x]))
@@ -297,14 +331,17 @@ namespace YAFBCore.Mapping
         /// <returns></returns>
         public int CompareTo(Map other)
         {
-            if (isDisposed)
+            if (isDisposed || other.isDisposed)
                 throw new InvalidOperationException("Map is already disposed");
-
-            if (!isLocked)
-                throw new InvalidOperationException("Please acquire a lock on this map");
 
             if (other == null)
                 return -1;
+
+            if (!isLocked || !other.isLocked)
+                throw new InvalidOperationException("Please acquire a lock on both maps before trying to merge them");
+
+            if (lockingThreadId != other.lockingThreadId || lockingThreadId != Thread.CurrentThread.ManagedThreadId)
+                throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
 
             // Sort it desc
             return -unitCount().CompareTo(other.unitCount());
@@ -337,6 +374,9 @@ namespace YAFBCore.Mapping
 
             if (!isLocked)
                 throw new InvalidOperationException("Please acquire a lock on this map");
+
+            if (lockingThreadId != Thread.CurrentThread.ManagedThreadId)
+                throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
 
             StringBuilder sb = new StringBuilder();
 

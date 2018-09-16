@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace YAFBCore.Networking
 {
-    public class UniverseGroupFlowControlWrapper
+    public class UniverseGroupFlowControlWrapper : IDisposable
     {
         internal readonly UniverseGroupFlowControl FlowControl;
 
@@ -51,9 +51,9 @@ namespace YAFBCore.Networking
         }
 
         /// <summary>
-        /// Internal Dispose of the FlowControl
+        /// Dispose of the FlowControl
         /// </summary>
-        internal void Dispose()
+        public void Dispose()
         {
             if (!isDisposed)
             {

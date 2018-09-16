@@ -14,12 +14,14 @@ namespace YAFBCoreTest
 
         static void Main(string[] args)
         {
-            Connection connection = ConnectionManager.Connect("kriegsviech@web.de", "flattiverse1337");
+            Connection connection = ConnectionManager.Connect("ddraghici@gmx.de", "flattiverse=1337");
 
             Flattiverse.UniverseGroup universeGroup = connection.UniverseGroups["Time Master"];
-            UniverseSession session = connection.Join(universeGroup, "dannyTest", universeGroup.Teams["None"]);
+            UniverseSession session = connection.Join(universeGroup, "dannyd", universeGroup.Teams["None"]);
 
             System.Threading.ThreadPool.QueueUserWorkItem(worker, session);
+
+            connection.MessageManager.ReadMessages();
 
             Console.ReadKey();
         }
@@ -30,12 +32,11 @@ namespace YAFBCoreTest
             UniverseGroupFlowControlWrapper flowControl = null;
 
             float scanDirection = 0f;
-            Flattiverse.Ship ship = null;
 
             flowControl = session.CreateFlowControl();
 
-            ship = session.CreateShip("D3RPTest", "D3RPTest");
-            ship.Continue();
+            var ship = session.ControllablesManager.CreateShip("D1RP", "D1RP");
+            ship.TryContinue();
 
             Console.CursorVisible = false;
 
@@ -45,64 +46,11 @@ namespace YAFBCoreTest
                 {
                     Console.SetCursorPosition(0, 0);
 
-                    flowControl.PreWait();
-
-                    #region Scan
-                    List<Flattiverse.ScanInfo> scanInfos = new List<Flattiverse.ScanInfo>();
-
-                    for (int i = 0; i < ship.ScannerCount; i++)
-                    {
-                        Flattiverse.ScanInfo scanInfo = new Flattiverse.ScanInfo(scanDirection, scanDirection + ship.ScannerDegreePerScan, ship.ScannerArea.Limit * 0.99f);
-
-                        scanDirection += ship.ScannerDegreePerScan;
-
-                        if (scanDirection >= 360f)
-                            scanDirection -= 360f;
-
-                        scanInfos.Add(scanInfo);
-                    }
-
-                    List<Flattiverse.Unit> units = ship.Scan(scanInfos);
-
-                    Map map = Map.Create(ship, units);
-
-                    if (map != null)
-                    {
-                        if (globalMap == null)
-                            globalMap = map;
-                        else
-                        {
-                            globalMap.BeginLock();
-                            map.BeginLock();
-
-                            globalMap.Merge(map);
-
-                            globalMap.Age();
-
-                            globalMap.DebugPrint();
-
-                            globalMap.EndLock();
-                            map.EndLock();
-
-                            map.Dispose();
-                        }
-                    }
-                    #endregion
+                    //flowControl.PreWait();
 
                     flowControl.Wait();
 
-                    Flattiverse.Unit refUnit = null;
-
-                    foreach (Flattiverse.Unit unit in units)
-                        if ((unit.Mobility == global::Flattiverse.Mobility.Still)
-                            && unit.Kind != global::Flattiverse.UnitKind.Explosion
-                            && (refUnit == null || (refUnit != null && refUnit.Position.Length > unit.Position.Length)))
-                            refUnit = unit;
-
-                    ship.Move(refUnit.Movement);
-
                     flowControl.Commit();
-
                 }
                 catch (NullReferenceException)
                 {
@@ -111,14 +59,11 @@ namespace YAFBCoreTest
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);
+                    Console.WriteLine(ex.StackTrace);
                     if (ship != null && ship.IsAlive)
                         continue;
 
-                    if (ship != null && !ship.IsAlive)
-                        ship.Continue();
-
                     Console.Clear();
-                    //Console.WriteLine(ex.StackTrace);
                 }
             }
             //finally

@@ -5,16 +5,6 @@ namespace YAFBCore.Utils
     public static class Helper
     {
         /// <summary>
-        /// Berechnet einen Winkel in einen Radianten um
-        /// </summary>
-        /// <param name="angle"></param>
-        /// <returns></returns>
-        public static float AngleInRadiant(float angle)
-        {
-            return angle * (float)Math.PI / 180f;
-        }
-
-        /// <summary>
         /// Schneidet einen String ab einer festgelegten Länge ab
         /// </summary>
         /// <param name="source"></param>

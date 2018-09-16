@@ -54,6 +54,13 @@ namespace YAFBCore.Controllables
         internal ManualResetEventSlim ShootWaiter = new ManualResetEventSlim(false);
         #endregion
 
+        #region Properties
+        /// <summary>
+        /// Returns the current universe the ship is in
+        /// </summary>
+        public Flattiverse.Universe Universe => ship.Universe;
+        #endregion
+
         /// <summary>
         /// 
         /// </summary>
@@ -97,6 +104,8 @@ namespace YAFBCore.Controllables
         /// </summary>
         protected override void worker()
         {
+            flowControl = Session.CreateFlowControl();
+
             while (!isDisposed)
             {
                 try
@@ -195,6 +204,7 @@ namespace YAFBCore.Controllables
             {
                 Debug.WriteLine($"{ship.Name}: Scan Exception");
                 Debug.WriteLine(ex.Message);
+                Debug.WriteLine(ex.StackTrace);
             }
             finally
             {
@@ -247,16 +257,22 @@ namespace YAFBCore.Controllables
         /// </summary>
         public override void Dispose()
         {
-            base.Dispose();
-
             try
             {
+                base.Dispose();
+
                 ScanWaiter.Dispose();
 
                 // We try to close the ship if it's still active
                 ship.Close();
+
+                Debug.WriteLine("Ship disposed!");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                Debug.WriteLine(ex.StackTrace);
+            }
         }
     }
 }

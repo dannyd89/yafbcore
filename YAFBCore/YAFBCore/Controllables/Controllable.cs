@@ -88,7 +88,6 @@ namespace YAFBCore.Controllables
             Name = controllable.Name;
             Class = controllable.Class;
 
-            flowControl = Session.CreateFlowControl();
             workerThread = new Thread(new ThreadStart(worker));
 
             workerThread.Start();
@@ -124,6 +123,8 @@ namespace YAFBCore.Controllables
                 throw new ObjectDisposedException("Controllable is already disposed");
 
             isDisposed = true;
+
+            Session.RemoveFlowControl(flowControl);
 
             while (workerThread.ThreadState == ThreadState.Running)
                 Thread.Sleep(10);
