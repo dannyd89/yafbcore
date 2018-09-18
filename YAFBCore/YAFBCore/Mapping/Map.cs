@@ -324,6 +324,40 @@ namespace YAFBCore.Mapping
         }
 
         /// <summary>
+        /// Searches the given player ship
+        /// </summary>
+        /// <param name="unitName">Name of the player ship</param>
+        /// <param name="playerShipMapUnit"></param>
+        /// <returns>true if unit was found</returns>
+        internal bool TryGetPlayerShip(string unitName, out PlayerShipMapUnit playerShipMapUnit)
+        {
+            if (isDisposed)
+                throw new InvalidOperationException("Map is already disposed");
+
+            if (!isLocked)
+                throw new InvalidOperationException("Please acquire a lock on this map");
+
+            if (lockingThreadId != Thread.CurrentThread.ManagedThreadId)
+                throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
+
+            playerShipMapUnit = null;
+
+            for (int i = 0; i < mapSections.Length; i++)
+            {
+                MapSection mapSection = mapSections[i];
+
+                for (int x = 0; x < mapSection.PlayerCount; x++)
+                    if (mapSection.PlayerUnits[x].Name == unitName)
+                    {
+                        playerShipMapUnit = (PlayerShipMapUnit)mapSection.PlayerUnits[x];
+                        return true;
+                    }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Used for sorting maps.
         /// <para>Sort Type: DESC</para>
         /// </summary>

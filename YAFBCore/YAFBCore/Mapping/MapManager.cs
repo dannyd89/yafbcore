@@ -100,7 +100,7 @@ namespace YAFBCore.Mapping
         /// <returns></returns>
         public bool TryGetMap(string universeName, out Map map)
         {
-            lock (syncSortedMapsObj)
+            lock (syncMainMapObj)
                 return mainMaps.TryGetValue(universeName, out map);
         }
 
@@ -124,6 +124,31 @@ namespace YAFBCore.Mapping
             }
 
             return units != null;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="universeName"></param>
+        /// <param name="unitName"></param>
+        /// <param name="playerShipMapUnit"></param>
+        /// <returns></returns>
+        public bool TryGetPlayerUnit(string universeName, string unitName, out PlayerShipMapUnit playerShipMapUnit)
+        {
+            playerShipMapUnit = null;
+
+            Map tempMap;
+            if (TryGetMap(universeName, out tempMap) && tempMap != null)
+            {
+                tempMap.BeginLock();
+
+                if (!tempMap.TryGetPlayerShip(unitName, out playerShipMapUnit))
+                    Debug.WriteLine("Didn't find the requested unit " + unitName + " in the given universe " + universeName);
+
+                tempMap.EndLock();
+            }
+
+            return playerShipMapUnit != null;
         }
 
         /// <summary>
