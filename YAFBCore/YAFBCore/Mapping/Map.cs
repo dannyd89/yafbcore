@@ -206,7 +206,7 @@ namespace YAFBCore.Mapping
             foreach (KeyValuePair<string, MapUnit> unitKvp in other.stillUnits)
                 if (stillUnits.TryGetValue(unitKvp.Key, out mapUnit))
                 {
-                    positionOffset = unitKvp.Value.PositionInternal - mapUnit.PositionInternal;
+                    positionOffset = mapUnit.PositionInternal - unitKvp.Value.PositionInternal;
                     break;
                 }
 
@@ -218,7 +218,9 @@ namespace YAFBCore.Mapping
             {
                 MapSection mapSection = other.mapSections[otherIndex];
                 MapUnit[] tempStillUnits = mapSection.StillUnits;
-                addOrUpdateUnits(tempStillUnits, positionOffset);
+
+                if (mapSection.StillCount > 0)
+                    addOrUpdateUnits(tempStillUnits, positionOffset);
 
                 for (int i = 0; i < tempStillUnits.Length; i++)
                 {
@@ -227,17 +229,20 @@ namespace YAFBCore.Mapping
 
                     if (!stillUnits.TryGetValue(tempStillUnits[i].Name, out mapUnit))
                     {
-                        tempStillUnits[i].PositionInternal = positionOffset + tempStillUnits[i].PositionInternal;
+                        //tempStillUnits[i].PositionInternal = positionOffset + tempStillUnits[i].PositionInternal;
 
-                        if (tempStillUnits[i].IsOrbiting)
-                            tempStillUnits[i].OrbitingCenter = positionOffset + tempStillUnits[i].OrbitingCenter;
+                        //if (tempStillUnits[i].IsOrbiting)
+                        //    tempStillUnits[i].OrbitingCenter = positionOffset + tempStillUnits[i].OrbitingCenter;
 
                         stillUnits.Add(tempStillUnits[i].Name, tempStillUnits[i]);
                     }
                 }
 
-                addOrUpdateUnits(mapSection.AgingUnits, positionOffset);
-                addOrUpdateUnits(mapSection.PlayerUnits, positionOffset);
+                if (mapSection.AgingCount > 0)
+                    addOrUpdateUnits(mapSection.AgingUnits, positionOffset);
+
+                if (mapSection.PlayerCount > 0)
+                    addOrUpdateUnits(mapSection.PlayerUnits, positionOffset);
             }
 
             return true;
@@ -532,10 +537,10 @@ namespace YAFBCore.Mapping
                 if (mapUnit == null)
                     break;
 
-                mapUnit.PositionInternal = mapUnit.PositionInternal + positionOffset;
+                mapUnit.PositionInternal = positionOffset + mapUnit.PositionInternal;
 
                 if (mapUnit.IsOrbiting)
-                    mapUnit.OrbitingCenter = mapUnit.OrbitingCenter + positionOffset;
+                    mapUnit.OrbitingCenter = positionOffset + mapUnit.OrbitingCenter;
 
                 mapSections[getMapSectionIndex(mapUnit.PositionInternal)].AddOrUpdate(mapUnit);
             }

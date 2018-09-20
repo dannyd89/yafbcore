@@ -37,7 +37,7 @@ namespace YAFBCore.Mapping.Units
 
         internal override bool Age()
         {
-            PositionInternal = PositionInternal + MovementInternal;
+            //PositionInternal = PositionInternal + MovementInternal;
 
             return base.Age();
         }

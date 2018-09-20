@@ -45,6 +45,11 @@ namespace YAFBCore.Controllables
         /// Waiter which can be used to know if this ship has successfully performed its move
         /// </summary>
         internal ManualResetEventSlim MoveWaiter = new ManualResetEventSlim(false);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private Flattiverse.Vector movement = Flattiverse.Vector.FromNull();
         #endregion
 
         #region Shooting Fields
@@ -198,6 +203,11 @@ namespace YAFBCore.Controllables
                         && (scanReference == null || scannedUnits[i].Position.Length < scanReference.Length))
                         scanReference = scannedUnits[i].Position;
 
+                for (int i = 0; i < scannedUnits.Count; i++)
+                    if (scannedUnits[i].Mobility == Flattiverse.Mobility.Still
+                        && scannedUnits[i].Kind != Flattiverse.UnitKind.Explosion)
+                        movement = scannedUnits[i].Movement;
+
                 Session.MapManager.Add(Mapping.Map.Create(ship, scannedUnits));
             }
             catch (Exception ex)
@@ -205,6 +215,8 @@ namespace YAFBCore.Controllables
                 Debug.WriteLine($"{ship.Name}: Scan Exception");
                 Debug.WriteLine(ex.Message);
                 Debug.WriteLine(ex.StackTrace);
+
+                TryContinue();
             }
             finally
             {
@@ -219,7 +231,7 @@ namespace YAFBCore.Controllables
         {
             try
             {
-                
+                //ship.Move(movement);
             }
             catch (Exception ex)
             {

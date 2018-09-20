@@ -107,7 +107,7 @@ namespace YAFBCore.Mapping.Units
             Map = map;
 
             Kind = kind;
-            this.RadiusInternal = radius;
+            RadiusInternal = radius;
             Name = name;
 
             this.mobility = mobility;
