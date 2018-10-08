@@ -50,9 +50,9 @@ namespace YAFBCore.Networking
             Connection connection;
             if (Connections.TryGetValue(email, out connection))
             {
-                connection.Close();
-
                 Connections = Connections.Remove(email);
+
+                connection.Close();
             }
         }
 
