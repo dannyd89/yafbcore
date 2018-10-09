@@ -20,7 +20,7 @@ namespace YAFBCore.Networking
         public readonly string Email;
 
         #region Events
-        public event EventHandler OnDisconnected;
+        public event EventHandler Disconnected;
         #endregion
 
         #region Connector
@@ -119,21 +119,15 @@ namespace YAFBCore.Networking
         }
 
         /// <summary>
-        /// Raises the OnDisconnected event to inform the listeners
-        /// </summary>
-        internal void RaiseOnDisconnected()
-        {
-            OnDisconnected?.Invoke(this, EventArgs.Empty);
-        }
-
-        /// <summary>
         /// Closes the connection to the Flattiverse server
         /// </summary>
         internal void Close()
         {
             if (connector.IsConnected)
             {
-                RaiseOnDisconnected();
+                Disconnected?.Invoke(this, EventArgs.Empty);
+
+                Leave();
 
                 connector.Close();
             }
@@ -148,17 +142,30 @@ namespace YAFBCore.Networking
         /// <returns>Returns a session of the universe</returns>
         public UniverseSession Join(UniverseGroup universeGroup, string name, Team team)
         {
+            if (!connector.IsConnected)
+                throw new ObjectDisposedException("Connection to Flattiverse was closed");
+
             if (universeGroup == null || string.IsNullOrWhiteSpace(name) || team == null)
                 throw new ArgumentNullException("Value is null");
 
             if (session != null)
-                throw new InvalidOperationException("Close the current session first before joining a new one.");
+                throw new InvalidOperationException("Close the current session first before joining a new one");
 
             session = new UniverseSession(this, universeGroup, name, team);
 
             return session;
         }
 
-        
+        /// <summary>
+        /// Leaves the current joined session
+        /// </summary>
+        public void Leave()
+        {
+            if (session == null)
+                throw new InvalidOperationException("There is no session currently joined which can be left");
+
+            session.Dispose();
+            session = null;
+        }
     }
 }

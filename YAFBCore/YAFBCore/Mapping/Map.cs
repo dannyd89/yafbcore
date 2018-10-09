@@ -241,8 +241,8 @@ namespace YAFBCore.Mapping
                 if (mapSection.AgingCount > 0)
                     addOrUpdateUnits(mapSection.AgingUnits, positionOffset);
 
-                if (mapSection.PlayerCount > 0)
-                    addOrUpdateUnits(mapSection.PlayerUnits, positionOffset);
+                //if (mapSection.PlayerCount > 0)
+                //    addOrUpdateUnits(mapSection.PlayerUnits, positionOffset);
             }
 
             return true;
@@ -376,11 +376,11 @@ namespace YAFBCore.Mapping
             if (other == null)
                 return -1;
 
-            if (!isLocked || !other.isLocked)
-                throw new InvalidOperationException("Please acquire a lock on both maps before trying to merge them");
+            //if (!isLocked || !other.isLocked)
+            //    throw new InvalidOperationException("Please acquire a lock on both maps before trying to merge them");
 
-            if (lockingThreadId != other.lockingThreadId || lockingThreadId != Thread.CurrentThread.ManagedThreadId)
-                throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
+            //if (lockingThreadId != other.lockingThreadId || lockingThreadId != Thread.CurrentThread.ManagedThreadId)
+            //    throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
 
             // Sort it desc
             return -unitCount().CompareTo(other.unitCount());
