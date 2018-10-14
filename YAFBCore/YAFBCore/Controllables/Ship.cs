@@ -231,7 +231,7 @@ namespace YAFBCore.Controllables
         {
             try
             {
-                ship.Move(movement);
+                //ship.Move(movement);
             }
             catch (Exception ex)
             {

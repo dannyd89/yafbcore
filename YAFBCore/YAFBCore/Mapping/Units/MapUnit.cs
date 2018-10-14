@@ -36,6 +36,59 @@ namespace YAFBCore.Mapping.Units
         internal Vector OrbitingCenter;
         protected List<UnitOrbitingState> orbitingList;
 
+
+        #region Properties
+        /// <summary>
+        /// Tells if the unit is aging over time
+        /// </summary>
+        public virtual bool IsAging => false;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public virtual int AgeMax => -1;
+
+        /// <summary>
+        /// Returns the current age of the unit
+        /// </summary>
+        public int CurrentAge => AgeInternal;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool IsOrbiting => isOrbiting;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool IsSolid => isSolid;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool IsMasking => isMasking;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public float Radius => RadiusInternal;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public Mobility Mobility => mobility;
+
+        /// <summary>
+        /// Returns a copy of the position vector
+        /// </summary>
+        public Vector Position => new Vector(PositionInternal);
+
+        /// <summary>
+        /// Returns a copy of the movement vector
+        /// </summary>
+        public Vector Movement => new Vector(MovementInternal);
+        #endregion
+
         /// <summary>
         /// Creates a map unit
         /// </summary>
@@ -167,80 +220,6 @@ namespace YAFBCore.Mapping.Units
 
             AgeInternal = 0;
         }
-
-        #region Properties
-        /// <summary>
-        /// Tells if the unit is aging over time
-        /// </summary>
-        public virtual bool IsAging
-        {
-            get { return false; }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public virtual int AgeMax
-        {
-            get { return -1; }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public bool IsOrbiting
-        {
-            get { return isOrbiting; }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public bool IsSolid
-        {
-            get { return isSolid; }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public bool IsMasking
-        {
-            get { return isMasking; }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public float Radius
-        {
-            get { return RadiusInternal; }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public Mobility Mobility
-        {
-            get { return mobility; }
-        }
-
-        /// <summary>
-        /// Returns a copy of the position vector
-        /// </summary>
-        public Vector Position
-        {
-            get { return new Vector(PositionInternal); }
-        }
-
-        /// <summary>
-        /// Returns a copy of the movement vector
-        /// </summary>
-        public Vector Movement
-        {
-            get { return new Vector(MovementInternal); }
-        }
-        #endregion
 
         /// <summary>
         /// Ages the unit.

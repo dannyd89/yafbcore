@@ -12,5 +12,9 @@ namespace YAFBCore.Mapping.Units
 		{
 			this.explosion = explosion;
 		}
-	}
+
+        public override int AgeMax => 10;
+
+        public override bool IsAging => true;
+    }
 }

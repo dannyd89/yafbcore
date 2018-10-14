@@ -200,6 +200,9 @@ namespace YAFBCore.Mapping
             if (lockingThreadId != other.lockingThreadId || lockingThreadId != Thread.CurrentThread.ManagedThreadId)
                 throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
 
+            if (Universe.Name != other.Universe.Name)
+                return false;
+
             Vector positionOffset = null;
 
             MapUnit mapUnit;
