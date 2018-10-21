@@ -161,6 +161,8 @@ namespace YAFBCore.Networking
 
                 flowControls = null;
 
+                System.Threading.Thread.Sleep(500);
+
                 UniverseGroup.Part();
             }
         }

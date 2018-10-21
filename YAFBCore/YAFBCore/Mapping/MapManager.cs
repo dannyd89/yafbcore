@@ -202,10 +202,12 @@ namespace YAFBCore.Mapping
         /// </summary>
         private void worker()
         {
-            using (UniverseGroupFlowControl flowControl = UniverseGroup.GetNewFlowControl())
+            using (UniverseGroupFlowControl flowControl = Session.UniverseGroup.GetNewFlowControl())
                 while (!isDisposed)
                     try
                     {
+                        Stopwatch sw = Stopwatch.StartNew();
+
                         flowControl.PreWait();
 
                         // Age the map because a tick has passed
@@ -286,13 +288,15 @@ namespace YAFBCore.Mapping
                         waitEvent.Set();
 
                         flowControl.Commit();
+
+                        Debug.WriteLine("MapManager worker time: " + sw.Elapsed);
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine(ex);
-
                         if (isDisposed)
-                            break; // Manager was disposed so we can stop this worker
+                            return; // Manager was disposed so we can stop this worker
+
+                        Debug.WriteLine(ex);
                     }
         }
     }

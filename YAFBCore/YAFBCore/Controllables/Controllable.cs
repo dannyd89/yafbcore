@@ -129,5 +129,7 @@ namespace YAFBCore.Controllables
             while (workerThread.ThreadState == ThreadState.Running)
                 Thread.Sleep(10);
         }
+
+        public virtual void Queue(Commands.Command command) { }
     }
 }

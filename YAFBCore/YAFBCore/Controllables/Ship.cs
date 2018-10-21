@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
+using YAFBCore.Controllables.Commands;
+using YAFBCore.Mapping.Units;
 using YAFBCore.Networking;
 
 namespace YAFBCore.Controllables
@@ -45,9 +47,24 @@ namespace YAFBCore.Controllables
         /// Waiter which can be used to know if this ship has successfully performed its move
         /// </summary>
         internal ManualResetEventSlim MoveWaiter = new ManualResetEventSlim(false);
+        
+        /// <summary>
+        /// Sync object to lock moveCommands queue
+        /// </summary>
+        private object syncMoveCommands = new object();
 
         /// <summary>
-        /// 
+        /// Stores the issued move commands
+        /// </summary>
+        private Queue<MoveCommand> moveCommands = new Queue<MoveCommand>();
+
+        /// <summary>
+        /// Last used move command
+        /// </summary>
+        private MoveCommand lastMoveCommand;
+
+        /// <summary>
+        /// Last movement vector
         /// </summary>
         private Flattiverse.Vector movement = Flattiverse.Vector.FromNull();
         #endregion
@@ -231,6 +248,19 @@ namespace YAFBCore.Controllables
         {
             try
             {
+                lock (syncMoveCommands)
+                    if (moveCommands.Count > 0)
+                        lastMoveCommand = moveCommands.Dequeue();
+
+                if (lastMoveCommand == null)
+                    return;
+                
+                PlayerShipMapUnit shipUnit;
+                if (Session.MapManager.TryGetPlayerUnit(ship.Universe.Name, ship.Name, out shipUnit))
+                {
+                    
+                }
+
                 //ship.Move(movement);
             }
             catch (Exception ex)
@@ -275,6 +305,8 @@ namespace YAFBCore.Controllables
 
                 ScanWaiter.Dispose();
 
+                flowControl.Dispose();
+
                 // We try to close the ship if it's still active
                 ship.Close();
 
@@ -284,6 +316,23 @@ namespace YAFBCore.Controllables
             {
                 Debug.WriteLine(ex.Message);
                 Debug.WriteLine(ex.StackTrace);
+            }
+        }
+
+        /// <summary>
+        /// Queues different commands into this ship and will be handled afterwards
+        /// </summary>
+        /// <param name="command"></param>
+        public override void Queue(Command command)
+        {
+            switch (command)
+            {
+                case MoveCommand moveCommand:
+                    lock (syncMoveCommands)
+                        moveCommands.Enqueue(moveCommand);
+                    break;
+                default:
+                    throw new NotSupportedException();
             }
         }
     }
