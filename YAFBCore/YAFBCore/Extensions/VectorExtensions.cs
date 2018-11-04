@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using YAFBCore.Utils.Mathematics;
 
 namespace YAFBCore.Extensions
 {
@@ -14,7 +15,7 @@ namespace YAFBCore.Extensions
         /// <returns></returns>
         public static bool IsZeroVector(this Vector v)
         {
-            return v.X == 0 && v.Y == 0 && v.Length == 0 && v.Angle == 0;
+            return MathUtil.NearEqual(v.X + v.Y, 0f);
         }
     }
 }

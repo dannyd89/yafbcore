@@ -29,7 +29,7 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// A dictionary to sort maps according to the available universes in a group
         /// </summary>
-        private Dictionary<string, List<Map>> sortedMaps;
+        private Dictionary<string, List<Map>> universeSortedMaps;
 
         /// <summary>
         /// Worker thread to merge maps etc.
@@ -67,11 +67,11 @@ namespace YAFBCore.Mapping
             UniverseGroup = universeSession.UniverseGroup;
 
             mainMaps = new Dictionary<string, Map>();
-            sortedMaps = new Dictionary<string, List<Map>>();
+            universeSortedMaps = new Dictionary<string, List<Map>>();
             foreach (Universe universe in UniverseGroup.Universes)
             {
                 mainMaps.Add(universe.Name, null);
-                sortedMaps.Add(universe.Name, new List<Map>());
+                universeSortedMaps.Add(universe.Name, new List<Map>());
             }
 
             workerThread = new Thread(new ThreadStart(worker));
@@ -165,7 +165,7 @@ namespace YAFBCore.Mapping
                     isDisposed = true;
 
                     mainMaps = null;
-                    sortedMaps = null;
+                    universeSortedMaps = null;
 
                     waitEvent.Dispose();
                 }
@@ -182,7 +182,7 @@ namespace YAFBCore.Mapping
                 if (isDisposed)
                     throw new ObjectDisposedException("MapManager is already disposed");
 
-                sortedMaps[map.Universe.Name].Add(map);
+                universeSortedMaps[map.Universe.Name].Add(map);
             }
         }
 
@@ -206,13 +206,13 @@ namespace YAFBCore.Mapping
                 while (!isDisposed)
                     try
                     {
-                        Stopwatch sw = Stopwatch.StartNew();
-
                         flowControl.PreWait();
+
+                        //Stopwatch sw = Stopwatch.StartNew();
 
                         // Age the map because a tick has passed
                         lock (syncSortedMapsObj)
-                            foreach (KeyValuePair<string, List<Map>> kvp in sortedMaps)
+                            foreach (KeyValuePair<string, List<Map>> kvp in universeSortedMaps)
                                 for (int i = 0; i < kvp.Value.Count; i++)
                                 {
                                     kvp.Value[i].BeginLock();
@@ -229,7 +229,7 @@ namespace YAFBCore.Mapping
                             ships[i].ScanWaiter.Wait();
 
                         lock (syncSortedMapsObj)
-                            foreach (KeyValuePair<string, List<Map>> kvp in sortedMaps)
+                            foreach (KeyValuePair<string, List<Map>> kvp in universeSortedMaps)
                             {
                                 List<Map> list = kvp.Value;
 
@@ -287,9 +287,9 @@ namespace YAFBCore.Mapping
                         // Manager is done
                         waitEvent.Set();
 
-                        flowControl.Commit();
+                        //Debug.WriteLine("MapManager worker time: " + sw.Elapsed);
 
-                        Debug.WriteLine("MapManager worker time: " + sw.Elapsed);
+                        flowControl.Commit();
                     }
                     catch (Exception ex)
                     {

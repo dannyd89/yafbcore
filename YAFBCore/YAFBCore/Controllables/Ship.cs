@@ -63,10 +63,14 @@ namespace YAFBCore.Controllables
         /// </summary>
         private MoveCommand lastMoveCommand;
 
+        public Flattiverse.Vector DesiredPosition => lastMoveCommand?.Position;
+
         /// <summary>
         /// Last movement vector
         /// </summary>
         private Flattiverse.Vector movement = Flattiverse.Vector.FromNull();
+
+        public Flattiverse.Vector Movement => movement;
         #endregion
 
         #region Shooting Fields
@@ -109,7 +113,11 @@ namespace YAFBCore.Controllables
                 }
 
                 if (!ship.IsAlive)
+                {
+                    reset();
+
                     ship.Continue();
+                }
 
                 return true;
             }
@@ -119,6 +127,16 @@ namespace YAFBCore.Controllables
 
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Reset ship after death
+        /// </summary>
+        private void reset()
+        {
+            lastMoveCommand = null;
+
+            resetWaiters();
         }
 
         /// <summary>
@@ -220,10 +238,10 @@ namespace YAFBCore.Controllables
                         && (scanReference == null || scannedUnits[i].Position.Length < scanReference.Length))
                         scanReference = scannedUnits[i].Position;
 
-                for (int i = 0; i < scannedUnits.Count; i++)
-                    if (scannedUnits[i].Mobility == Flattiverse.Mobility.Still
-                        && scannedUnits[i].Kind != Flattiverse.UnitKind.Explosion)
-                        movement = scannedUnits[i].Movement;
+                //for (int i = 0; i < scannedUnits.Count; i++)
+                //    if (scannedUnits[i].Mobility == Flattiverse.Mobility.Still
+                //        && scannedUnits[i].Kind != Flattiverse.UnitKind.Explosion)
+                //        movement = scannedUnits[i].Movement;
 
                 Session.MapManager.Add(Mapping.Map.Create(ship, scannedUnits));
             }
@@ -251,17 +269,27 @@ namespace YAFBCore.Controllables
                 lock (syncMoveCommands)
                     if (moveCommands.Count > 0)
                         lastMoveCommand = moveCommands.Dequeue();
-
-                if (lastMoveCommand == null)
-                    return;
                 
                 PlayerShipMapUnit shipUnit;
                 if (Session.MapManager.TryGetPlayerUnit(ship.Universe.Name, ship.Name, out shipUnit))
                 {
-                    
-                }
+                    if (lastMoveCommand == null)
+                        lastMoveCommand = new MoveCommand(shipUnit.PositionInternal.X, shipUnit.PositionInternal.Y);
 
-                //ship.Move(movement);
+                    movement = lastMoveCommand.Position - shipUnit.PositionInternal;
+
+                    if (movement.Length < 150f)
+                    {
+                        if (movement.Length > ship.Radius / 2f)
+                            movement.Length = ship.EngineAcceleration.Limit * (movement.Length / 150f);
+                        else
+                            movement.Length = ship.EngineAcceleration.Limit * 0.3f;
+                    }
+                    else
+                        movement.Length = Math.Min(movement.Length, ship.EngineAcceleration.Limit * 0.99f);
+
+                    ship.Move(movement);
+                }
             }
             catch (Exception ex)
             {

@@ -8,7 +8,9 @@ namespace YAFBCore.Controllables.Commands
     {
         public readonly float X;
         public readonly float Y;
-        
+
+        internal readonly Flattiverse.Vector Position;
+
         public bool Reached;
 
         public override CommandType Type => CommandType.Move;
@@ -17,6 +19,8 @@ namespace YAFBCore.Controllables.Commands
         {
             X = x;
             Y = y;
+
+            Position = new Flattiverse.Vector(x, y);
         }
     }
 }

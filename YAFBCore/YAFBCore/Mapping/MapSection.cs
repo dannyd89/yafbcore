@@ -176,10 +176,10 @@ namespace YAFBCore.Mapping
                 }
             }
 
-            if ((sortValue & 0x0100) == 0x0100)
-            {
-                // TODO: PlayerUnits sorter
-            }
+            //if ((sortValue & 0x0100) == 0x0100)
+            //{
+            //    // TODO: PlayerUnits sorter
+            //}
         }
 
         /// <summary>
