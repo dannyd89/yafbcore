@@ -280,10 +280,10 @@ namespace YAFBCore.Controllables
 
                     if (movement.Length < 150f)
                     {
-                        if (movement.Length > ship.Radius / 2f)
-                            movement.Length = ship.EngineAcceleration.Limit * (movement.Length / 150f);
+                        if (movement.Length > 2f)
+                            movement.Length = Math.Max(ship.EngineAcceleration.Limit * 0.3f, ship.EngineAcceleration.Limit * (movement.Length / 150f));
                         else
-                            movement.Length = ship.EngineAcceleration.Limit * 0.3f;
+                            movement.Length = ship.EngineAcceleration.Limit * 0.4f;
                     }
                     else
                         movement.Length = Math.Min(movement.Length, ship.EngineAcceleration.Limit * 0.99f);
