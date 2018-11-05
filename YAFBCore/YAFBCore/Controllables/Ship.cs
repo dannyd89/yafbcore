@@ -278,15 +278,17 @@ namespace YAFBCore.Controllables
 
                     movement = lastMoveCommand.Position - shipUnit.PositionInternal;
 
-                    if (movement.Length < 150f)
+                    if (movement < 250f)
                     {
-                        if (movement.Length > 2f)
-                            movement.Length = Math.Max(ship.EngineAcceleration.Limit * 0.3f, ship.EngineAcceleration.Limit * (movement.Length / 150f));
-                        else
-                            movement.Length = ship.EngineAcceleration.Limit * 0.4f;
+                        movement.Length = ship.EngineAcceleration.Limit * movement.Length;
+
+                        movement = movement - shipUnit.MovementInternal;
+
+                        if (movement > ship.EngineAcceleration.Limit * 0.99f)
+                            movement.Length = ship.EngineAcceleration.Limit * 0.99f;
                     }
                     else
-                        movement.Length = Math.Min(movement.Length, ship.EngineAcceleration.Limit * 0.99f);
+                        movement.Length = ship.EngineAcceleration.Limit * 0.99f;
 
                     ship.Move(movement);
                 }

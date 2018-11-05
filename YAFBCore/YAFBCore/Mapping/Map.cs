@@ -117,6 +117,7 @@ namespace YAFBCore.Mapping
                         break;
                     }
 
+                movementOffset = new Flattiverse.Vector(-movementOffset.X, -movementOffset.Y);
                 //if (movementOffset.IsZeroVector())
                 //    return null;
 
