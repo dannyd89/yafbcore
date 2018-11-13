@@ -2,7 +2,7 @@
 Yet another flattiverse bot .NET core library from Daniel Draghici
 
 # Requirements
-- .NET Core 2.0
+- .NET Standard 2.0
 - Visual Studio 2017 or any IDE which supports C# 7.0 syntax
 
 # TODO
