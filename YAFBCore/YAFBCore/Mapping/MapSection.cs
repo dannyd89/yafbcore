@@ -255,12 +255,8 @@ namespace YAFBCore.Mapping
         {
             public static readonly RadiusComparer Default = new RadiusComparer();
 
-            private bool desc;
-
-            public RadiusComparer(bool desc = true)
-            {
-                this.desc = desc;
-            }
+            public RadiusComparer()
+            { }
 
             public int Compare(MapUnit x, MapUnit y)
             {
@@ -271,9 +267,7 @@ namespace YAFBCore.Mapping
                 else if (x == null && y == null)
                     return 0;
 
-                int val = x.RadiusInternal.CompareTo(y.RadiusInternal);
-
-                return desc ? -val : val;
+                return -x.RadiusInternal.CompareTo(y.RadiusInternal);
             }
         }
 

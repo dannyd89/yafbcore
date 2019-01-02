@@ -12,5 +12,15 @@ namespace YAFBCore.Mapping.Units
 		{
 			this.planet = planet;
 		}
-	}
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public override int AgeMax => -1;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public override bool IsAging => isOrbiting;
+    }
 }

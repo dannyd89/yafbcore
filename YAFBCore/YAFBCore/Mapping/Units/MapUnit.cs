@@ -78,6 +78,8 @@ namespace YAFBCore.Mapping.Units
         /// </summary>
         public Mobility Mobility => mobility;
 
+        // TODO: Überlegen ob es hier sinnvoll ist immer einen neuen Vector zu erzeugen, wegen dem GC
+
         /// <summary>
         /// Returns a copy of the position vector
         /// </summary>
@@ -155,7 +157,7 @@ namespace YAFBCore.Mapping.Units
                          Vector position, 
                          Vector movement,
                          Vector orbitingCenter = null,
-                         ReadOnlyCollection<OrbitingState> orbitingList = null)
+                         IEnumerable<OrbitingState> orbitingList = null)
         {
             Map = map;
 
@@ -205,8 +207,8 @@ namespace YAFBCore.Mapping.Units
 
             gravity = mapUnit.gravity;
 
-            PositionInternal = mapUnit.PositionInternal;
-            MovementInternal = mapUnit.MovementInternal;
+            PositionInternal = new Vector(mapUnit.PositionInternal);
+            MovementInternal = new Vector(mapUnit.MovementInternal);
 
             if (isOrbiting)
             {

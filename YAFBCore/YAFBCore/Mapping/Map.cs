@@ -14,9 +14,14 @@ using YAFBCore.Utils.Mathematics;
 
 namespace YAFBCore.Mapping
 {
+
     // TODO: Map has to be internal
     public class Map : IDisposable, IComparable<Map>
     {
+        #region Fields and Properties
+        /// <summary>
+        /// Id counter
+        /// </summary>
         private static long counter = 0;
 
         /// <summary>
@@ -75,17 +80,32 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// States whether the map is locked or not
         /// </summary>
-        private volatile bool isLocked = false;
+        private bool isLocked = false;
 
         /// <summary>
         /// 
         /// </summary>
-        private volatile bool isDisposed;
+        private bool isDisposed;
 
         /// <summary>
         /// True when Dispose() was called
         /// </summary>
         public bool IsDisposed => isDisposed;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private bool isUpdated;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        internal bool IsUpdated
+        {
+            get => isUpdated;
+            set => isUpdated = value;
+        }
+        #endregion
 
         #region Constructors or Create functions
         /// <summary>
@@ -118,8 +138,6 @@ namespace YAFBCore.Mapping
                     }
 
                 movementOffset = new Flattiverse.Vector(-movementOffset.X, -movementOffset.Y);
-                //if (movementOffset.IsZeroVector())
-                //    return null;
 
                 Universe universe = creator.Universe;
                 string currentPlayerName = universe.Connector.Player.Name;
@@ -217,14 +235,18 @@ namespace YAFBCore.Mapping
             // No reference point found between both maps
             if (positionOffset == null)
                 return false;
-            
+
             for (int otherIndex = 0; otherIndex < other.mapSections.Length; otherIndex++)
             {
                 MapSection mapSection = other.mapSections[otherIndex];
                 MapUnit[] tempStillUnits = mapSection.StillUnits;
 
                 if (mapSection.StillCount > 0)
+                {
                     addOrUpdateUnits(tempStillUnits, positionOffset);
+
+                    isUpdated = true;
+                }
 
                 for (int i = 0; i < tempStillUnits.Length; i++)
                 {
@@ -232,18 +254,15 @@ namespace YAFBCore.Mapping
                         break;
 
                     if (!stillUnits.TryGetValue(tempStillUnits[i].Name, out mapUnit))
-                    {
-                        //tempStillUnits[i].PositionInternal = positionOffset + tempStillUnits[i].PositionInternal;
-
-                        //if (tempStillUnits[i].IsOrbiting)
-                        //    tempStillUnits[i].OrbitingCenter = positionOffset + tempStillUnits[i].OrbitingCenter;
-
                         stillUnits.Add(tempStillUnits[i].Name, tempStillUnits[i]);
-                    }
                 }
 
                 if (mapSection.AgingCount > 0)
+                {
                     addOrUpdateUnits(mapSection.AgingUnits, positionOffset);
+
+                    isUpdated = true;
+                }
 
                 //if (mapSection.PlayerCount > 0)
                 //    addOrUpdateUnits(mapSection.PlayerUnits, positionOffset);
@@ -284,6 +303,8 @@ namespace YAFBCore.Mapping
                     }
 
                     mapSection.Sort(MapSectionSortType.AgingUnits);
+
+                    isUpdated = true;
                 }
             }
         }
@@ -358,6 +379,7 @@ namespace YAFBCore.Mapping
                 for (int x = 0; x < mapSection.PlayerCount; x++)
                     if (mapSection.PlayerUnits[x].Name == unitName)
                     {
+                        // TODO: Hier müsste eine Überprüfung noch rein, weil es nicht immer nur PlayerShips sein müssen
                         playerShipMapUnit = (PlayerShipMapUnit)mapSection.PlayerUnits[x];
                         return true;
                     }
@@ -379,12 +401,6 @@ namespace YAFBCore.Mapping
 
             if (other == null)
                 return -1;
-
-            //if (!isLocked || !other.isLocked)
-            //    throw new InvalidOperationException("Please acquire a lock on both maps before trying to merge them");
-
-            //if (lockingThreadId != other.lockingThreadId || lockingThreadId != Thread.CurrentThread.ManagedThreadId)
-            //    throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
 
             // Sort it desc
             return -unitCount().CompareTo(other.unitCount());
@@ -529,9 +545,10 @@ namespace YAFBCore.Mapping
         }
 
         /// <summary>
-        /// 
+        /// Adds or updates the array to the correct mapsection
         /// </summary>
-        /// <param name="array"></param>
+        /// <param name="array">Units to add to this map</param>
+        /// <param name="positionOffset">Position offset to update the map unit position</param>
         private void addOrUpdateUnits(MapUnit[] array, Vector positionOffset)
         {
             for (int i = 0; i < array.Length; i++)

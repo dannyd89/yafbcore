@@ -56,4 +56,8 @@
     </Compile>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Pathfinding\" />
+  </ItemGroup>
+
 </Project>

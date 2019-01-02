@@ -15,7 +15,7 @@ namespace YAFBCore.Extensions
         /// <returns></returns>
         public static bool IsZeroVector(this Vector v)
         {
-            return MathUtil.NearEqual(v.X + v.Y, 0f);
+            return MathUtil.IsZero(v.X + v.Y);
         }
     }
 }

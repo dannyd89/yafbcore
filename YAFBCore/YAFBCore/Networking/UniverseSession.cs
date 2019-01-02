@@ -151,19 +151,30 @@ namespace YAFBCore.Networking
                 if (isDisposed)
                     throw new ObjectDisposedException("UniverseSession is already disposed");
 
-                isDisposed = true;
-
-                ControllablesManager.Dispose();
                 MapManager.Dispose();
+                ControllablesManager.Dispose();
 
                 foreach (var flowControl in flowControls)
                     flowControl.Dispose();
 
                 flowControls = null;
 
-                System.Threading.Thread.Sleep(500);
+                try
+                {
+                    var player = UniverseGroup.Players[Parent.Connector.Player.Name];
+
+                    while (player.ControllableInfos.List.Count > 0)
+                    {
+                        Console.WriteLine("Still active units: " + player.ControllableInfos.List.Count);
+
+                        System.Threading.Thread.Sleep(100);
+                    }
+                }
+                catch { }
 
                 UniverseGroup.Part();
+
+                isDisposed = true;
             }
         }
     }

@@ -9,8 +9,18 @@ using YAFBCore.Networking;
 
 namespace YAFBCore.Mapping
 {
+    public delegate void MapUpdatedEventHandler(Map map);
+
     public class MapManager : IDisposable
     {
+        #region Events
+        /// <summary>
+        /// Called when the unit data of the map has changed
+        /// </summary>
+        public event MapUpdatedEventHandler MapUpdated;
+        #endregion
+
+        #region Fields and Properties
         /// <summary>
         /// The session this manager was created in
         /// </summary>
@@ -54,8 +64,13 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// Determines if this manager is disposed
         /// </summary>
-        private volatile bool isDisposed;
+        private bool isDisposed;
+
+        /// <summary>
+        /// Determines if this manager is disposed
+        /// </summary>
         public bool IsDisposed => isDisposed;
+        #endregion
 
         /// <summary>
         /// Creates a map manager
@@ -68,6 +83,7 @@ namespace YAFBCore.Mapping
 
             mainMaps = new Dictionary<string, Map>();
             universeSortedMaps = new Dictionary<string, List<Map>>();
+
             foreach (Universe universe in UniverseGroup.Universes)
             {
                 mainMaps.Add(universe.Name, null);
@@ -208,8 +224,6 @@ namespace YAFBCore.Mapping
                     {
                         flowControl.PreWait();
 
-                        //Stopwatch sw = Stopwatch.StartNew();
-
                         // Age the map because a tick has passed
                         lock (syncSortedMapsObj)
                             foreach (KeyValuePair<string, List<Map>> kvp in universeSortedMaps)
@@ -236,9 +250,10 @@ namespace YAFBCore.Mapping
                                 if (list.Count > 0)
                                 {
                                     for (int i = 0; i < list.Count; i++)
-                                    {
                                         list[i].BeginLock();
 
+                                    for (int i = 0; i < list.Count; i++)
+                                    {
                                         // Determines if a successful merge has happend
                                         bool merged;
 
@@ -250,44 +265,38 @@ namespace YAFBCore.Mapping
                                             {
                                                 Debug.Assert(list[i].Id != list[n].Id);
 
-                                                list[n].BeginLock();
-
                                                 if (list[i].Merge(list[n]))
                                                 {
                                                     list[n].Dispose();
                                                     list.RemoveAt(n);
 
                                                     merged = true;
-
-                                                    // We need to continue since we disposed the map already and EndLock cant be called
-                                                    continue;
                                                 }
-                                                //else
-                                                //{
-                                                //    Debug.WriteLine("Merge not successful");
-
-                                                //    list[i].DebugPrint();
-                                                //    list[n].DebugPrint();
-                                                //}
-
-                                                list[n].EndLock();
                                             }
                                         } while (merged);
-
-                                        list[i].EndLock();
                                     }
 
                                     list.Sort();
 
                                     lock (syncMainMapObj)
                                         mainMaps[kvp.Key] = list[0];
+
+                                    for (int i = 0; i < list.Count; i++)
+                                    {
+                                        list[i].EndLock();
+
+                                        if (list[i].IsUpdated)
+                                        {
+                                            MapUpdated?.Invoke(list[i]);
+
+                                            list[i].IsUpdated = false;
+                                        }
+                                    }
                                 }
                             }
 
                         // Manager is done
                         waitEvent.Set();
-
-                        //Debug.WriteLine("MapManager worker time: " + sw.Elapsed);
 
                         flowControl.Commit();
                     }

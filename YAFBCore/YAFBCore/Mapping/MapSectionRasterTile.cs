@@ -12,7 +12,7 @@ namespace YAFBCore.Mapping
         public float Y;
         public int Size;
         public byte Weight;
-        public byte Value;
+        public ushort Value;
         public MapSectionRasterTile LastTile;
 
         public MapSectionRasterTile()

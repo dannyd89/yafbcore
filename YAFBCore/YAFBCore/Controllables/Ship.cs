@@ -88,44 +88,26 @@ namespace YAFBCore.Controllables
         #endregion
 
         /// <summary>
-        /// 
+        /// Creates a ship controllable
         /// </summary>
         /// <param name="ship"></param>
         internal Ship(UniverseSession universeSession, Flattiverse.Ship ship) 
             : base(universeSession, ship)
         {
             this.ship = ship;
+
+            Session.MapManager.MapUpdated += MapManager_MapUpdated;
         }
 
         /// <summary>
-        /// Continues the ship if possible
-        /// <para>Can trigger ActiveStateChanged event if IsActive is false</para>
+        /// Gets fired if any map was updated
         /// </summary>
-        /// <returns>True if continue was successful</returns>
-        public bool TryContinue()
+        /// <param name="map"></param>
+        private void MapManager_MapUpdated(Mapping.Map map)
         {
-            try
+            if (map.Universe.Name == ship.Universe.Name)
             {
-                if (!ship.IsActive)
-                {
-                    ActiveStateChanged?.Invoke(this, EventArgs.Empty);
-                    return false;
-                }
 
-                if (!ship.IsAlive)
-                {
-                    reset();
-
-                    ship.Continue();
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-
-                return false;
             }
         }
 
@@ -137,6 +119,16 @@ namespace YAFBCore.Controllables
             lastMoveCommand = null;
 
             resetWaiters();
+        }
+
+        /// <summary>
+        /// Resets all the waiters of this ship
+        /// </summary>
+        private void resetWaiters()
+        {
+            ScanWaiter.Reset();
+            MoveWaiter.Reset();
+            ShootWaiter.Reset();
         }
 
         /// <summary>
@@ -180,16 +172,6 @@ namespace YAFBCore.Controllables
                     Debug.WriteLine(ex.Message);
                 }
             }
-        }
-
-        /// <summary>
-        /// Resets all the waiters of this ship
-        /// </summary>
-        private void resetWaiters()
-        {
-            ScanWaiter.Reset();
-            MoveWaiter.Reset();
-            ShootWaiter.Reset();
         }
 
         /// <summary>
@@ -237,11 +219,6 @@ namespace YAFBCore.Controllables
                         && scannedUnits[i].Kind != Flattiverse.UnitKind.Explosion
                         && (scanReference == null || scannedUnits[i].Position.Length < scanReference.Length))
                         scanReference = scannedUnits[i].Position;
-
-                //for (int i = 0; i < scannedUnits.Count; i++)
-                //    if (scannedUnits[i].Mobility == Flattiverse.Mobility.Still
-                //        && scannedUnits[i].Kind != Flattiverse.UnitKind.Explosion)
-                //        movement = scannedUnits[i].Movement;
 
                 Session.MapManager.Add(Mapping.Map.Create(ship, scannedUnits));
             }
@@ -331,14 +308,16 @@ namespace YAFBCore.Controllables
         {
             try
             {
-                base.Dispose();
+                resetWaiters();
 
                 ScanWaiter.Dispose();
-
-                flowControl.Dispose();
+                MoveWaiter.Dispose();
+                ShootWaiter.Dispose();
 
                 // We try to close the ship if it's still active
                 ship.Close();
+
+                base.Dispose();
 
                 Debug.WriteLine("Ship disposed!");
             }
@@ -346,6 +325,38 @@ namespace YAFBCore.Controllables
             {
                 Debug.WriteLine(ex.Message);
                 Debug.WriteLine(ex.StackTrace);
+            }
+        }
+
+        /// <summary>
+        /// Continues the ship if possible
+        /// <para>Can trigger ActiveStateChanged event if IsActive is false</para>
+        /// </summary>
+        /// <returns>True if continue was successful</returns>
+        public bool TryContinue()
+        {
+            try
+            {
+                if (!ship.IsActive)
+                {
+                    ActiveStateChanged?.Invoke(this, EventArgs.Empty);
+                    return false;
+                }
+
+                if (!ship.IsAlive)
+                {
+                    reset();
+
+                    ship.Continue();
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+
+                return false;
             }
         }
 
