@@ -188,7 +188,7 @@ namespace YAFBCore.Mapping
         /// <param name="tileSize"></param>
         public void Rasterize(int tileSize)
         {
-            rasterList[tileSize] = MapSectionRasterizer.Rasterize(this, tileSize);
+            rasterList[tileSize] = MapSectionRaster.Rasterize(this, tileSize);
         }
 
         /// <summary>

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using YAFBCore.Controllables.Commands;
+using YAFBCore.Mapping;
 using YAFBCore.Mapping.Units;
 using YAFBCore.Networking;
 
@@ -23,6 +24,16 @@ namespace YAFBCore.Controllables
         /// Flattiverse ship
         /// </summary>
         private Flattiverse.Ship ship;
+
+        /// <summary>
+        /// Current active map
+        /// </summary>
+        private Map currentMap;
+
+        /// <summary>
+        /// Current active map unit of this ship
+        /// </summary>
+        private PlayerShipMapUnit playerShipMapUnit;
 
         #region Scanning Fields
         /// <summary>
@@ -101,14 +112,14 @@ namespace YAFBCore.Controllables
 
         /// <summary>
         /// Gets fired if any map was updated
+        /// Uses the map where this unit is in
         /// </summary>
         /// <param name="map"></param>
-        private void MapManager_MapUpdated(Mapping.Map map)
+        private void MapManager_MapUpdated(Map map)
         {
-            if (map.Universe.Name == ship.Universe.Name)
-            {
-
-            }
+            if (map.Universe.Name == ship.Universe.Name
+                && map.TryGetPlayerShip(ship.Name, out playerShipMapUnit))
+                currentMap = map;
         }
 
         /// <summary>
@@ -220,7 +231,7 @@ namespace YAFBCore.Controllables
                         && (scanReference == null || scannedUnits[i].Position.Length < scanReference.Length))
                         scanReference = scannedUnits[i].Position;
 
-                Session.MapManager.Add(Mapping.Map.Create(ship, scannedUnits));
+                Session.MapManager.Add(Map.Create(ship, scannedUnits));
             }
             catch (Exception ex)
             {
@@ -247,19 +258,18 @@ namespace YAFBCore.Controllables
                     if (moveCommands.Count > 0)
                         lastMoveCommand = moveCommands.Dequeue();
                 
-                PlayerShipMapUnit shipUnit;
-                if (Session.MapManager.TryGetPlayerUnit(ship.Universe.Name, ship.Name, out shipUnit))
+                if (currentMap != null && playerShipMapUnit != null)
                 {
                     if (lastMoveCommand == null)
-                        lastMoveCommand = new MoveCommand(shipUnit.PositionInternal.X, shipUnit.PositionInternal.Y);
+                        lastMoveCommand = new MoveCommand(playerShipMapUnit.PositionInternal.X, playerShipMapUnit.PositionInternal.Y);
 
-                    movement = lastMoveCommand.Position - shipUnit.PositionInternal;
+                    movement = lastMoveCommand.Position - playerShipMapUnit.PositionInternal;
 
                     if (movement < 250f)
                     {
                         movement.Length = ship.EngineAcceleration.Limit * movement.Length;
 
-                        movement = movement - shipUnit.MovementInternal;
+                        movement = movement - playerShipMapUnit.MovementInternal;
 
                         if (movement > ship.EngineAcceleration.Limit * 0.99f)
                             movement.Length = ship.EngineAcceleration.Limit * 0.99f;

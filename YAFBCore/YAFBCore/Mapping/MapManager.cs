@@ -143,25 +143,55 @@ namespace YAFBCore.Mapping
         }
 
         /// <summary>
-        /// 
+        /// Returns the searched player ship unit and the map containing it
         /// </summary>
-        /// <param name="universeName"></param>
-        /// <param name="unitName"></param>
-        /// <param name="playerShipMapUnit"></param>
+        /// <param name="universeName">The universe to search the unit in</param>
+        /// <param name="unitName">Unit name</param>
+        /// <param name="map">The map the unit is in</param>
+        /// <param name="playerShipMapUnit">The searched unit</param>
         /// <returns></returns>
-        public bool TryGetPlayerUnit(string universeName, string unitName, out PlayerShipMapUnit playerShipMapUnit)
+        public bool TryGetPlayerUnit(string universeName, string unitName, out Map map, out PlayerShipMapUnit playerShipMapUnit)
         {
+            map = null;
             playerShipMapUnit = null;
 
-            Map tempMap;
-            if (TryGetMap(universeName, out tempMap) && tempMap != null)
+            Map tempMainMap;
+            if (TryGetMap(universeName, out tempMainMap) && tempMainMap != null)
             {
-                tempMap.BeginLock();
+                tempMainMap.BeginLock();
 
-                if (!tempMap.TryGetPlayerShip(unitName, out playerShipMapUnit))
-                    Debug.WriteLine("Didn't find the requested unit " + unitName + " in the given universe " + universeName);
+                if (!tempMainMap.TryGetPlayerShip(unitName, out playerShipMapUnit))
+                {
+                    lock (syncSortedMapsObj)
+                    {
+                        List<Map> universeMaps = universeSortedMaps[universeName];
 
-                tempMap.EndLock();
+                        if (universeMaps.Count > 1)
+                            for (int i = 1; i < universeMaps.Count; i++)
+                            {
+                                Map tempMap = universeMaps[i];
+
+                                try
+                                {
+                                    tempMap.BeginLock();
+
+                                    if (tempMap.TryGetPlayerShip(unitName, out playerShipMapUnit))
+                                    {
+                                        map = tempMap;
+                                        break;
+                                    }
+                                }
+                                finally
+                                {
+                                    tempMap.EndLock();
+                                }
+                            }
+                    }
+                }
+                else
+                    map = tempMainMap;
+
+                tempMainMap.EndLock();
             }
 
             return playerShipMapUnit != null;
@@ -283,14 +313,14 @@ namespace YAFBCore.Mapping
 
                                     for (int i = 0; i < list.Count; i++)
                                     {
-                                        list[i].EndLock();
-
                                         if (list[i].IsUpdated)
                                         {
                                             MapUpdated?.Invoke(list[i]);
 
                                             list[i].IsUpdated = false;
                                         }
+
+                                        list[i].EndLock();
                                     }
                                 }
                             }

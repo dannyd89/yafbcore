@@ -389,6 +389,15 @@ namespace YAFBCore.Mapping
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="tileSize"></param>
+        internal void Rasterize(int tileSize)
+        {
+
+        }
+
+        /// <summary>
         /// Used for sorting maps.
         /// <para>Sort Type: DESC</para>
         /// </summary>
