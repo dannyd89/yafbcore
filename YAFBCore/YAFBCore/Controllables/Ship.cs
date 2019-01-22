@@ -162,6 +162,14 @@ namespace YAFBCore.Controllables
                     // Let the map manager process all the scanned info
                     Session.MapManager.Wait();
 
+                    Stopwatch sw = Stopwatch.StartNew();
+
+                    currentMap.BeginLock();
+                    Pathfinding.AStarPathing.AStarPathfinder pathFinder = currentMap.GetPathFinder(this).Result;
+                    currentMap.EndLock();
+
+                    Console.WriteLine("Rasterizing time: " + sw.Elapsed);
+
                     // Perform any move command if available
                     move();
 
@@ -257,28 +265,25 @@ namespace YAFBCore.Controllables
                 lock (syncMoveCommands)
                     if (moveCommands.Count > 0)
                         lastMoveCommand = moveCommands.Dequeue();
-                
-                if (currentMap != null && playerShipMapUnit != null)
-                {
-                    if (lastMoveCommand == null)
+                    else
                         lastMoveCommand = new MoveCommand(playerShipMapUnit.PositionInternal.X, playerShipMapUnit.PositionInternal.Y);
 
-                    movement = lastMoveCommand.Position - playerShipMapUnit.PositionInternal;
+                movement = lastMoveCommand.Position - playerShipMapUnit.PositionInternal;
 
-                    if (movement < 250f)
-                    {
-                        movement.Length = ship.EngineAcceleration.Limit * movement.Length;
+                if (movement < 250f)
+                {
+                    movement.Length = ship.EngineAcceleration.Limit * movement.Length;
 
-                        movement = movement - playerShipMapUnit.MovementInternal;
+                    movement = movement - playerShipMapUnit.MovementInternal;
 
-                        if (movement > ship.EngineAcceleration.Limit * 0.99f)
-                            movement.Length = ship.EngineAcceleration.Limit * 0.99f;
-                    }
-                    else
+                    if (movement > ship.EngineAcceleration.Limit * 0.99f)
                         movement.Length = ship.EngineAcceleration.Limit * 0.99f;
-
-                    ship.Move(movement);
                 }
+                else
+                    movement.Length = ship.EngineAcceleration.Limit * 0.99f;
+
+                ship.Move(movement);
+
             }
             catch (Exception ex)
             {

@@ -11,6 +11,7 @@ using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using YAFBCore.Utils.Mathematics;
+using YAFBCore.Pathfinding.AStarPathing;
 
 namespace YAFBCore.Mapping
 {
@@ -32,7 +33,7 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// Defines the width and height of a section
         /// </summary>
-        internal const int SectionSize = 4096;
+        internal const int SectionSize = 2048;
 
         /// <summary>
         /// The universe this map belongs to
@@ -95,7 +96,7 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// 
         /// </summary>
-        private bool isUpdated;
+        private bool isUpdated = true;
 
         /// <summary>
         /// 
@@ -389,12 +390,39 @@ namespace YAFBCore.Mapping
         }
 
         /// <summary>
-        /// 
+        /// Asynchronously rasterizes the map if unit size isnt known yet to the map
+        /// Returns a path finder populated with the generated rasters
         /// </summary>
         /// <param name="tileSize"></param>
-        internal void Rasterize(int tileSize)
+        public async Task<AStarPathfinder> GetPathFinder(Controllables.Controllable controllable)
         {
+            int tileSize = 2, radius = (int)(controllable.Radius * 2f + 0.1f);
 
+            while (tileSize < radius)
+                tileSize <<= 1;
+
+            //Console.WriteLine("Controllable Radius: " + radius + " tile size: " + tileSize);
+
+            if (isDisposed)
+                throw new InvalidOperationException("Map is already disposed");
+
+            if (!isLocked)
+                throw new InvalidOperationException("Please acquire a lock on this map");
+
+            if (lockingThreadId != Thread.CurrentThread.ManagedThreadId)
+                throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
+
+            Task<MapSectionRaster>[] tasks = new Task<MapSectionRaster>[mapSections.Length];
+            for (int i = 0; i < mapSections.Length; i++)
+                tasks[i] = mapSections[i].GetRaster(tileSize);
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            MapSectionRaster[] rasters = new MapSectionRaster[mapSections.Length];
+            for (int i = 0; i < rasters.Length; i++)
+                rasters[i] = tasks[i].Result;
+
+            return await Task.FromResult(new AStarPathfinder(rasters));
         }
 
         /// <summary>
@@ -429,49 +457,6 @@ namespace YAFBCore.Mapping
             stillUnits = null;
 
             lockMapEvent.Dispose();
-        }
-
-        /// <summary>
-        /// Prints the map into the console
-        /// </summary>
-        [Conditional("DEBUG")]
-        public void DebugPrint()
-        {
-            if (isDisposed)
-                throw new InvalidOperationException("Map is already disposed");
-
-            if (!isLocked)
-                throw new InvalidOperationException("Please acquire a lock on this map");
-
-            if (lockingThreadId != Thread.CurrentThread.ManagedThreadId)
-                throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
-
-            StringBuilder sb = new StringBuilder();
-
-            sb.AppendLine("-- Still Units --                                 ");
-
-            foreach (KeyValuePair<string, MapUnit> unitKvp in stillUnits)
-                sb.AppendLine(unitKvp.Value.ToString());
-
-            for (int i = 0; i < mapSections.Length; i++)
-            {
-                if (mapSections[i].AgingCount > 0)
-                {
-                    sb.Append("-- Printing section with Index:                              ");
-                    sb.AppendLine(i.ToString());
-
-                    sb.AppendLine("\t---- Aging Units -----                              ");
-                    for (int x = 0; x < mapSections[i].AgingUnits.Length; x++)
-                    {
-                        if (mapSections[i].AgingUnits[x] == null)
-                            break;
-
-                        sb.AppendLine(mapSections[i].AgingUnits[x].ToString() + "                                ");
-                    }
-                }
-            }
-
-            Console.WriteLine(sb.ToString());
         }
         #endregion
 
@@ -515,7 +500,7 @@ namespace YAFBCore.Mapping
         }
 
         /// <summary>
-        /// Returns the transformed position of a unit into and index of a 1D array
+        /// Returns the transformed position of a unit into an index of a 1D array
         /// </summary>
         /// <param name="x"></param>
         /// <param name="y"></param>

@@ -72,6 +72,11 @@ namespace YAFBCore.Controllables
         /// States if controllable is currently alive
         /// </summary>
         public bool IsAlive => controllable.IsAlive;
+
+        /// <summary>
+        /// Radius of the controllable
+        /// </summary>
+        public float Radius => controllable.Radius;
         #endregion
 
         /// <summary>

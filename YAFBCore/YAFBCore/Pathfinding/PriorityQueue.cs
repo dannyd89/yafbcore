@@ -8,13 +8,14 @@ namespace YAFBCore.Pathfinding
 {
     /// CREDITS TO BlueRaja
     /// Taken from https://github.com/BlueRaja/High-Speed-Priority-Queue-for-C-Sharp
+    /// Modified for this specific project to not use interfaces which aren't needed
 
     /// <summary>
     /// An implementation of a min-Priority Queue using a heap.  Has O(1) .Contains()!
     /// See https://github.com/BlueRaja/High-Speed-Priority-Queue-for-C-Sharp/wiki/Getting-Started for more information
     /// </summary>
     /// <typeparam name="T">The values in the queue.  Must extend the FastPriorityQueueNode class</typeparam>
-    public sealed class PriorityQueue: IEnumerable<MapSectionRasterTile>//IFixedSizePriorityQueue<T, float>
+    internal sealed class PriorityQueue: IEnumerable<MapSectionRasterTile>//IFixedSizePriorityQueue<T, float>
     {
         private int _numNodes;
         private MapSectionRasterTile[] _nodes;

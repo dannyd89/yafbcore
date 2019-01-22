@@ -183,12 +183,19 @@ namespace YAFBCore.Mapping
         }
 
         /// <summary>
-        /// 
+        /// Rasterizes the map if unit size isnt known yet to the map
         /// </summary>
         /// <param name="tileSize"></param>
-        public void Rasterize(int tileSize)
+        public System.Threading.Tasks.Task<MapSectionRaster> GetRaster(int tileSize)
         {
-            rasterList[tileSize] = MapSectionRaster.Rasterize(this, tileSize);
+            return System.Threading.Tasks.Task.Run(() =>
+            {
+                MapSectionRaster raster;
+                if (!rasterList.TryGetValue(tileSize, out raster))
+                    rasterList[tileSize] = raster = MapSectionRaster.Rasterize(this, tileSize);
+
+                return raster;
+            });
         }
 
         /// <summary>

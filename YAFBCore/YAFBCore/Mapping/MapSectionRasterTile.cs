@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace YAFBCore.Mapping
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public class MapSectionRasterTile
+    internal class MapSectionRasterTile
     {
         /// <summary>
         /// Status of this tile
@@ -18,9 +18,10 @@ namespace YAFBCore.Mapping
         /// </summary>
         public byte Status;
         /// <summary>
-        /// Weight the tile has 
+        /// Weight the tile has for path finding
+        /// Higher weight is more useful
         /// </summary>
-        public byte Weight;
+        public short Weight;
         /// <summary>
         /// X of the parent
         /// </summary>
@@ -45,10 +46,6 @@ namespace YAFBCore.Mapping
         public int Gone;
         /// <summary>
         /// Sum of Gone + Weight + Heuristic
-        /// Should be Priority?!
-        /// </summary>
-        public int Sum;
-        /// <summary>
         /// The Priority to insert this node at.  Must be set BEFORE adding a node to the queue (ideally just once, in the node's constructor).
         /// Should not be manually edited once the node has been enqueued - use queue.UpdatePriority() instead
         /// </summary>

@@ -1,6 +1,7 @@
 ﻿using Flattiverse;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -19,8 +20,8 @@ namespace YAFBCore.Mapping
         internal readonly int Width;
         internal readonly int Height;
 
-        private readonly Transformator X;
-        private readonly Transformator Y;
+        //private readonly Transformator X;
+        //private readonly Transformator Y;
 
         /// <summary>
         /// 
@@ -38,10 +39,10 @@ namespace YAFBCore.Mapping
             Width = width;
             Height = height;
             
-            X = new Transformator(mapSection.Left, mapSection.Right, 0, width);
-            Y = new Transformator(mapSection.Top, mapSection.Bottom, 0, height);
+            //X = new Transformator(mapSection.Left, mapSection.Right, 0, width);
+            //Y = new Transformator(mapSection.Top, mapSection.Bottom, 0, height);
 
-            System.Threading.ThreadPool.QueueUserWorkItem(weightWorker);
+            //System.Threading.ThreadPool.QueueUserWorkItem(weightWorker);
         }
 
         /// <summary>
@@ -52,6 +53,8 @@ namespace YAFBCore.Mapping
         /// <returns></returns>
         public static MapSectionRaster Rasterize(MapSection mapSection, int tileSize)
         {
+            Stopwatch sw = Stopwatch.StartNew();
+
             int width = (int)(Math.Abs(mapSection.Left) + mapSection.Right + 0.5f);
             int height = (int)(Math.Abs(mapSection.Top) + mapSection.Bottom + 0.5f);
             int mapRasterWidth = (int)((float)width / (float)tileSize + 0.5f);
@@ -62,14 +65,34 @@ namespace YAFBCore.Mapping
 
             MapSectionRasterTile[] mapRasterTiles = new MapSectionRasterTile[mapRasterWidth * mapRasterHeight];
 
+            MapUnit[] stillUnits = mapSection.StillUnits;
             for (int i = 0; i < mapRasterTiles.Length; i++)
             {
                 var tile = new MapSectionRasterTile();
                 tile.X = startX + tileSize * (i % mapRasterWidth);
                 tile.Y = startY + tileSize * (i / mapRasterWidth);
 
-                mapRasterTiles[i] = new MapSectionRasterTile();
+                for (int unitIndex = 0; unitIndex < stillUnits.Length; unitIndex++)
+                {
+                    MapUnit mapUnit = stillUnits[unitIndex];
+
+                    if (mapUnit == null)
+                        break;
+
+                    if (intersects(tile, tileSize, mapUnit.PositionInternal, mapUnit.RadiusInternal))
+                    {
+                        // TODO: Hier sollte noch eine Überprüfung für spezielle Units rein
+                        // die je nachdem einen Bereich als schlecht oder gut definieren
+                        // Sonne z.B. die Koronas als gut, Blackholes der Wirkungskreis als schlecht
+
+                        //tile.Weight = 255;
+                    }
+                }
+
+                mapRasterTiles[i] = tile;
             }
+
+            Console.WriteLine("Raster time: " + sw.Elapsed);
             
             return new MapSectionRaster(mapSection, mapRasterTiles, tileSize, mapRasterWidth, mapRasterHeight);
         }
@@ -78,52 +101,53 @@ namespace YAFBCore.Mapping
         /// 
         /// </summary>
         /// <param name="nothing"></param>
-        private void weightWorker(object nothing)
-        {
-            MapUnit[] stillUnits = MapSection.StillUnits;
+        //private void weightWorker(object nothing)
+        //{
+        //    // TODO: Das könnte hier gefährlich werden, weil wir in einem extra Thread sind und die Section nicht gelockt ist
+        //    MapUnit[] stillUnits = MapSection.StillUnits;
 
-            for (int unitIndex = 0; unitIndex < stillUnits.Length; unitIndex++)
-            {
-                MapUnit mapUnit = stillUnits[unitIndex];
+        //    for (int rasterIndex = 0; rasterIndex < Tiles.Length; rasterIndex++)
+        //        for (int unitIndex = 0; unitIndex < stillUnits.Length; unitIndex++)
+        //        {
+        //            MapUnit mapUnit = stillUnits[unitIndex];
 
-                if (mapUnit == null)
-                    break;
+        //            if (mapUnit == null)
+        //                break;
 
-                for (int rasterIndex = 0; rasterIndex < Tiles.Length; rasterIndex++)
-                    if (intersects(mapUnit, Tiles[rasterIndex]))
-                    {
-                        // TODO: Hier sollte noch eine Überprüfung für spezielle Units rein
-                        // die je nachdem einen Bereich als schlecht oder gut definieren
-                        // Sonne z.B. die Koronas als gut, Blackholes der Wirkungskreis als schlecht
+        //            if (intersects(Tiles[rasterIndex], mapUnit.PositionInternal, mapUnit.RadiusInternal))
+        //            {
+        //                // TODO: Hier sollte noch eine Überprüfung für spezielle Units rein
+        //                // die je nachdem einen Bereich als schlecht oder gut definieren
+        //                // Sonne z.B. die Koronas als gut, Blackholes der Wirkungskreis als schlecht
 
-                        
-                        //tile.Weight = 255;
-                    }
-            }
-        }
+        //                //tile.Weight = 255;
+        //            }
+        //        }
+        //}
 
         /// <summary>
         /// Checks if unit intersects with the given tile
         /// </summary>
-        /// <param name="mapUnit"></param>
-        /// <param name="tile"></param>
-        /// <returns>True if intersects with tile</returns>
+        /// <param name="tile">Tile to use for check</param>
+        /// <param name="tileSize">Size of the tile</param>
+        /// <param name="position">Position of the unit</param>
+        /// <param name="radius">Radius to use for the check, useful for checking if coronas intersect with the tile</param>
+        /// <returns>True if intersecting with tile</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool intersects(MapUnit mapUnit, MapSectionRasterTile tile)
+        private static bool intersects(MapSectionRasterTile tile, int tileSize, Vector position, float radius)
         {
-            float x = mapUnit.PositionInternal.X, y = mapUnit.PositionInternal.Y;
+            float x = position.X, y = position.Y;
 
             // Find the closest point to the circle within the rectangle
-            float closestX = MathUtil.Clamp(x, tile.X, tile.X + TileSize);
-            float closestY = MathUtil.Clamp(y, tile.Y, tile.Y + TileSize);
+            float closestX = MathUtil.Clamp(x, tile.X, tile.X + tileSize);
+            float closestY = MathUtil.Clamp(y, tile.Y, tile.Y + tileSize);
 
             // Calculate the distance between the circle's center and this closest point
             float distanceX = x - closestX;
             float distanceY = y - closestY;
 
             // If the distance is less than the circle's radius, an intersection occurs
-            float distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
-            return distanceSquared < (mapUnit.Radius * mapUnit.Radius);
+            return (distanceX * distanceX) + (distanceY * distanceY) < (radius * radius);
         }
     }
 }

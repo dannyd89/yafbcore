@@ -257,11 +257,11 @@ namespace YAFBCore.Mapping
                         // Age the map because a tick has passed
                         lock (syncSortedMapsObj)
                             foreach (KeyValuePair<string, List<Map>> kvp in universeSortedMaps)
-                                for (int i = 0; i < kvp.Value.Count; i++)
+                                foreach (Map map in kvp.Value)
                                 {
-                                    kvp.Value[i].BeginLock();
-                                    kvp.Value[i].Age();
-                                    kvp.Value[i].EndLock();
+                                    map.BeginLock();
+                                    map.Age();
+                                    map.EndLock();
                                 }
 
                         // Used to signal that the manager wants to merge
