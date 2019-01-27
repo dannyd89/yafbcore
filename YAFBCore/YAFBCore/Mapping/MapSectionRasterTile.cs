@@ -8,15 +8,12 @@ using System.Threading.Tasks;
 namespace YAFBCore.Mapping
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    internal class MapSectionRasterTile
+    internal sealed class MapSectionRasterTile
     {
         /// <summary>
         /// Status of this tile
-        /// 0x00 - Not yet checked
-        /// 0x0F - Already checked
-        /// 0xFF - Not walkable
         /// </summary>
-        public byte Status;
+        public MapSectionRasterTileStatus Status;
         /// <summary>
         /// Weight the tile has for path finding
         /// Higher weight is more useful

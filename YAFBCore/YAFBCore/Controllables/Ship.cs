@@ -162,13 +162,15 @@ namespace YAFBCore.Controllables
                     // Let the map manager process all the scanned info
                     Session.MapManager.Wait();
 
-                    Stopwatch sw = Stopwatch.StartNew();
+                    //Stopwatch sw = Stopwatch.StartNew();
 
-                    currentMap.BeginLock();
-                    Pathfinding.AStarPathing.AStarPathfinder pathFinder = currentMap.GetPathFinder(this).Result;
-                    currentMap.EndLock();
+                    //currentMap.BeginLock();
+                    //var task = currentMap.GetPathFinder(NeededTileSize);
+                    //Console.WriteLine("Is Completed? " + task.IsCompleted);
+                    //Pathfinding.AStarPathing.AStarPathfinder pathFinder = task.Result;
+                    //currentMap.EndLock();
 
-                    Console.WriteLine("Rasterizing time: " + sw.Elapsed);
+                    //Console.WriteLine("Rasterizing time: " + sw.Elapsed);
 
                     // Perform any move command if available
                     move();
@@ -239,7 +241,7 @@ namespace YAFBCore.Controllables
                         && (scanReference == null || scannedUnits[i].Position.Length < scanReference.Length))
                         scanReference = scannedUnits[i].Position;
 
-                Session.MapManager.Add(Map.Create(ship, scannedUnits));
+                Session.MapManager.Add(Map.Create(this, scannedUnits));
             }
             catch (Exception ex)
             {

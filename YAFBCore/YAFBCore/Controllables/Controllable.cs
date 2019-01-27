@@ -16,7 +16,7 @@ namespace YAFBCore.Controllables
         /// <summary>
         /// Flattiverse controllable
         /// </summary>
-        protected readonly Flattiverse.Controllable controllable;
+        internal readonly Flattiverse.Controllable Base;
 
         /// <summary>
         /// Name of controllable
@@ -27,6 +27,16 @@ namespace YAFBCore.Controllables
         /// Configurator class of this controllable
         /// </summary>
         public readonly string Class;
+
+        /// <summary>
+        /// Radius of the controllable
+        /// </summary>
+        public readonly float Radius;
+
+        /// <summary>
+        /// The needed size of tiles for save path finding this controllable needs
+        /// </summary>
+        public readonly int NeededTileSize;
 
         /// <summary>
         /// Flow control for the current universe group
@@ -41,7 +51,7 @@ namespace YAFBCore.Controllables
         /// <summary>
         /// 
         /// </summary>
-        protected volatile bool isDisposed;
+        protected bool isDisposed;
 
         #region Properties
         /// <summary>
@@ -66,17 +76,12 @@ namespace YAFBCore.Controllables
         /// States if controllable is currently active in the universe
         /// If false, needs to join again
         /// </summary>
-        public bool IsActive => controllable.IsActive;
+        public bool IsActive => Base.IsActive;
 
         /// <summary>
         /// States if controllable is currently alive
         /// </summary>
-        public bool IsAlive => controllable.IsAlive;
-
-        /// <summary>
-        /// Radius of the controllable
-        /// </summary>
-        public float Radius => controllable.Radius;
+        public bool IsAlive => Base.IsAlive;
         #endregion
 
         /// <summary>
@@ -88,10 +93,17 @@ namespace YAFBCore.Controllables
         {
             Session = universeSession;
 
-            this.controllable = controllable;
+            this.Base = controllable;
 
             Name = controllable.Name;
             Class = controllable.Class;
+
+            NeededTileSize = 2;
+            Radius = controllable.Radius;
+            int tempRadius = (int)(Radius * 2f + 0.1f);
+
+            while (NeededTileSize < tempRadius)
+                NeededTileSize <<= 1;
 
             workerThread = new Thread(new ThreadStart(worker));
 

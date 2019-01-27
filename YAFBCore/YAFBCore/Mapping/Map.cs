@@ -46,6 +46,21 @@ namespace YAFBCore.Mapping
         private Dictionary<string, MapUnit> stillUnits = new Dictionary<string, MapUnit>();
 
         /// <summary>
+        /// List to find own player units faster
+        /// </summary>
+        private Dictionary<string, PlayerShipMapUnit> ownPlayerUnits = new Dictionary<string, PlayerShipMapUnit>();
+
+        /// <summary>
+        /// List of path finders with specific tile sizes
+        /// </summary>
+        private Dictionary<int, AStarPathfinder> pathFinders = new Dictionary<int, AStarPathfinder>();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private object syncPathFinders = new object();
+
+        /// <summary>
         /// Map is divided into sections to optimize path finding
         /// </summary>
         private MapSection[] mapSections;
@@ -125,10 +140,12 @@ namespace YAFBCore.Mapping
         /// </summary>
         /// <param name="creator">Unit which scanned the passed units</param>
         /// <param name="units">Units which were scanned</param>
-        public static Map Create(Controllable creator, List<Unit> units)
+        public static Map Create(Controllables.Controllable creator, List<Unit> units)
         {
+#if DEBUG
             try
             {
+#endif
                 Vector movementOffset = Vector.FromNull();
                 foreach (Unit unit in units)
                     if (unit.Kind != UnitKind.Explosion
@@ -140,7 +157,7 @@ namespace YAFBCore.Mapping
 
                 movementOffset = new Flattiverse.Vector(-movementOffset.X, -movementOffset.Y);
 
-                Universe universe = creator.Universe;
+                Universe universe = creator.Base.Universe;
                 string currentPlayerName = universe.Connector.Player.Name;
 
                 Map map = new Map(universe);
@@ -159,10 +176,14 @@ namespace YAFBCore.Mapping
                         map.stillUnits.Add(mapUnit.Name, mapUnit);
                 }
 
-                mapUnit = MapUnitFactory.GetMapUnit(map, creator, movementOffset);
+                lock (map.syncPathFinders)
+                    map.pathFinders.Add(creator.NeededTileSize, new AStarPathfinder(creator.NeededTileSize));
+
+                mapUnit = MapUnitFactory.GetMapUnit(map, creator.Base, movementOffset);
                 map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal)].AddOrUpdate(mapUnit);
 
                 return map;
+#if DEBUG
             }
             catch (Exception ex)
             {
@@ -171,6 +192,7 @@ namespace YAFBCore.Mapping
 
                 return null;
             }
+#endif
         }
         #endregion
 
@@ -214,11 +236,13 @@ namespace YAFBCore.Mapping
             if (isDisposed)
                 throw new ObjectDisposedException("Map is already disposed");
 
+#if DEBUG
             if (!isLocked || !other.isLocked)
                 throw new InvalidOperationException("Please acquire a lock on both maps before trying to merge them");
 
             if (lockingThreadId != other.lockingThreadId || lockingThreadId != Thread.CurrentThread.ManagedThreadId)
                 throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
+#endif
 
             if (Universe.Name != other.Universe.Name)
                 return false;
@@ -280,11 +304,13 @@ namespace YAFBCore.Mapping
             if (isDisposed)
                 throw new InvalidOperationException("Map is already disposed");
 
+#if DEBUG
             if (!isLocked)
                 throw new InvalidOperationException("Please acquire a lock on this map");
 
             if (lockingThreadId != Thread.CurrentThread.ManagedThreadId)
                 throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
+#endif
 
             for (int i = 0; i < mapSections.Length; i++)
             {
@@ -321,11 +347,13 @@ namespace YAFBCore.Mapping
             if (isDisposed)
                 throw new InvalidOperationException("Map is already disposed");
 
+#if DEBUG
             if (!isLocked)
                 throw new InvalidOperationException("Please acquire a lock on this map");
 
             if (lockingThreadId != Thread.CurrentThread.ManagedThreadId)
                 throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
+#endif
 
             List<MapUnit> mapUnits = new List<MapUnit>(300);
 
@@ -365,11 +393,13 @@ namespace YAFBCore.Mapping
             if (isDisposed)
                 throw new InvalidOperationException("Map is already disposed");
 
+#if DEBUG
             if (!isLocked)
                 throw new InvalidOperationException("Please acquire a lock on this map");
 
             if (lockingThreadId != Thread.CurrentThread.ManagedThreadId)
                 throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
+#endif
 
             playerShipMapUnit = null;
 
@@ -390,39 +420,25 @@ namespace YAFBCore.Mapping
         }
 
         /// <summary>
-        /// Asynchronously rasterizes the map if unit size isnt known yet to the map
-        /// Returns a path finder populated with the generated rasters
+        /// Returns a path finder with a specific tile size
+        /// Does not generate a path finder
+        /// If tile size is unknown an exception will happen
         /// </summary>
-        /// <param name="tileSize"></param>
-        public async Task<AStarPathfinder> GetPathFinder(Controllables.Controllable controllable)
+        /// <param name="tileSize">Requested tile size of the path finder</param>
+        public AStarPathfinder GetPathFinder(int tileSize)
         {
-            int tileSize = 2, radius = (int)(controllable.Radius * 2f + 0.1f);
-
-            while (tileSize < radius)
-                tileSize <<= 1;
-
-            //Console.WriteLine("Controllable Radius: " + radius + " tile size: " + tileSize);
-
             if (isDisposed)
                 throw new InvalidOperationException("Map is already disposed");
 
-            if (!isLocked)
-                throw new InvalidOperationException("Please acquire a lock on this map");
+            lock (syncPathFinders)
+            {
+#if DEBUG
+                if (!pathFinders.ContainsKey(tileSize))
+                    throw new KeyNotFoundException("Couldn't find path finder with specified tile size");
+#endif
 
-            if (lockingThreadId != Thread.CurrentThread.ManagedThreadId)
-                throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
-
-            Task<MapSectionRaster>[] tasks = new Task<MapSectionRaster>[mapSections.Length];
-            for (int i = 0; i < mapSections.Length; i++)
-                tasks[i] = mapSections[i].GetRaster(tileSize);
-
-            await Task.WhenAll(tasks).ConfigureAwait(false);
-
-            MapSectionRaster[] rasters = new MapSectionRaster[mapSections.Length];
-            for (int i = 0; i < rasters.Length; i++)
-                rasters[i] = tasks[i].Result;
-
-            return await Task.FromResult(new AStarPathfinder(rasters));
+                return pathFinders[tileSize];
+            }
         }
 
         /// <summary>
@@ -433,11 +449,13 @@ namespace YAFBCore.Mapping
         /// <returns></returns>
         public int CompareTo(Map other)
         {
+#if DEBUG
             if (isDisposed || other.isDisposed)
                 throw new InvalidOperationException("Map is already disposed");
 
             if (other == null)
                 return -1;
+#endif 
 
             // Sort it desc
             return -unitCount().CompareTo(other.unitCount());
@@ -448,8 +466,10 @@ namespace YAFBCore.Mapping
         /// </summary>
         public void Dispose()
         {
+#if DEBUG
             if (isDisposed)
                 throw new InvalidOperationException("Map is already disposed");
+#endif
 
             isDisposed = true;
 

@@ -12,7 +12,7 @@ using YAFBCore.Utils.Mathematics;
 
 namespace YAFBCore.Mapping
 {
-    internal class MapSectionRaster
+    internal sealed class MapSectionRaster
     {
         internal readonly MapSection MapSection;
         internal readonly MapSectionRasterTile[] Tiles;
@@ -79,14 +79,14 @@ namespace YAFBCore.Mapping
                     if (mapUnit == null)
                         break;
 
-                    if (intersects(tile, tileSize, mapUnit.PositionInternal, mapUnit.RadiusInternal))
-                    {
-                        // TODO: Hier sollte noch eine Überprüfung für spezielle Units rein
-                        // die je nachdem einen Bereich als schlecht oder gut definieren
-                        // Sonne z.B. die Koronas als gut, Blackholes der Wirkungskreis als schlecht
+                    // TODO: Hier sollte noch eine Überprüfung für spezielle Units rein
+                    // die je nachdem einen Bereich als schlecht oder gut definieren
+                    // Sonne z.B. die Koronas als gut, Blackholes der Wirkungskreis als schlecht
 
-                        //tile.Weight = 255;
-                    }
+                    if (mapUnit.IsSolid 
+                        && mapUnit.Mobility == Mobility.Still 
+                        && intersects(tile, tileSize, mapUnit.PositionInternal, mapUnit.RadiusInternal))
+                        tile.Status = MapSectionRasterTileStatus.Blocked;
                 }
 
                 mapRasterTiles[i] = tile;
@@ -96,34 +96,6 @@ namespace YAFBCore.Mapping
             
             return new MapSectionRaster(mapSection, mapRasterTiles, tileSize, mapRasterWidth, mapRasterHeight);
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="nothing"></param>
-        //private void weightWorker(object nothing)
-        //{
-        //    // TODO: Das könnte hier gefährlich werden, weil wir in einem extra Thread sind und die Section nicht gelockt ist
-        //    MapUnit[] stillUnits = MapSection.StillUnits;
-
-        //    for (int rasterIndex = 0; rasterIndex < Tiles.Length; rasterIndex++)
-        //        for (int unitIndex = 0; unitIndex < stillUnits.Length; unitIndex++)
-        //        {
-        //            MapUnit mapUnit = stillUnits[unitIndex];
-
-        //            if (mapUnit == null)
-        //                break;
-
-        //            if (intersects(Tiles[rasterIndex], mapUnit.PositionInternal, mapUnit.RadiusInternal))
-        //            {
-        //                // TODO: Hier sollte noch eine Überprüfung für spezielle Units rein
-        //                // die je nachdem einen Bereich als schlecht oder gut definieren
-        //                // Sonne z.B. die Koronas als gut, Blackholes der Wirkungskreis als schlecht
-
-        //                //tile.Weight = 255;
-        //            }
-        //        }
-        //}
 
         /// <summary>
         /// Checks if unit intersects with the given tile
@@ -139,12 +111,12 @@ namespace YAFBCore.Mapping
             float x = position.X, y = position.Y;
 
             // Find the closest point to the circle within the rectangle
-            float closestX = MathUtil.Clamp(x, tile.X, tile.X + tileSize);
-            float closestY = MathUtil.Clamp(y, tile.Y, tile.Y + tileSize);
+            //float closestX = MathUtil.Clamp(x, tile.X, tile.X + tileSize);
+            //float closestY = MathUtil.Clamp(y, tile.Y, tile.Y + tileSize);
 
             // Calculate the distance between the circle's center and this closest point
-            float distanceX = x - closestX;
-            float distanceY = y - closestY;
+            float distanceX = x - MathUtil.Clamp(x, tile.X, tile.X + tileSize);
+            float distanceY = y - MathUtil.Clamp(y, tile.Y, tile.Y + tileSize);
 
             // If the distance is less than the circle's radius, an intersection occurs
             return (distanceX * distanceX) + (distanceY * distanceY) < (radius * radius);
