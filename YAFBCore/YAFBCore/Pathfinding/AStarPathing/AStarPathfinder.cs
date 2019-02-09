@@ -30,7 +30,7 @@ namespace YAFBCore.Pathfinding.AStarPathing
         public bool IsReady { get; private set; }
 
         /// <summary>
-        /// 
+        /// Creates a 
         /// </summary>
         /// <param name="rasters"></param>
         internal AStarPathfinder(int tileSize)
@@ -44,8 +44,8 @@ namespace YAFBCore.Pathfinding.AStarPathing
         /// <param name="mapSections"></param>
         internal void UpdateRasterAsync(MapSection[] mapSections)
         {
-            IsReady = false;
             waitEvent.Reset();
+            IsReady = false;
 
             ThreadPool.QueueUserWorkItem(update, mapSections);
         }
@@ -72,9 +72,13 @@ namespace YAFBCore.Pathfinding.AStarPathing
 
             Task.WaitAll(tasks);
 
-            rasters = new MapSectionRaster[mapSections.Length];
-            for (int i = 0; i < rasters.Length; i++)
-                rasters[i] = tasks[i].Result;
+            // TODO: I dont think that we need to do this if we have the same amount of rasters
+            if (rasters == null || rasters.Length != mapSections.Length)
+            {
+                rasters = new MapSectionRaster[mapSections.Length];
+                for (int i = 0; i < rasters.Length; i++)
+                    rasters[i] = tasks[i].Result;
+            }
 
             waitEvent.Set();
         }

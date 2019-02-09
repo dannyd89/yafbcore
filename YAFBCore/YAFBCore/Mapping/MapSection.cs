@@ -109,15 +109,15 @@ namespace YAFBCore.Mapping
         /// <param name="mapUnit"></param>
         public void AddOrUpdate(MapUnit mapUnit)
         {
-            int index;
             if (mapUnit.Mobility == Mobility.Still)
             {
-                if (!arrayContains(StillUnits, mapUnit, out index))
+                if (!arrayContains(StillUnits, mapUnit, out _))
                     addInternal(ref StillUnits, ref stillCount, mapUnit);
             }
 
             if (mapUnit.IsAging)
             {
+                int index;
                 if (!arrayContains(AgingUnits, mapUnit, out index))
                     addInternal(ref AgingUnits, ref agingCount, mapUnit);
                 else
@@ -135,6 +135,7 @@ namespace YAFBCore.Mapping
                 || mapUnit.Kind == UnitKind.PlayerPlatform 
                 || mapUnit.Kind == UnitKind.PlayerProbe)
             {
+                int index;
                 if (!arrayContains(PlayerUnits, mapUnit, out index))
                     addInternal(ref PlayerUnits, ref playerCount, mapUnit);
                 else
@@ -145,6 +146,59 @@ namespace YAFBCore.Mapping
                         PlayerUnits[index] = mapUnit;
                 }
             }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="mapUnit"></param>
+        internal bool Remove(MapUnit mapUnit)
+        {
+            MapSectionSortType sortType = MapSectionSortType.None;
+            if (mapUnit.Mobility == Mobility.Still)
+            {
+                int index;
+                if (arrayContains(StillUnits, mapUnit, out index))
+                {
+                    StillUnits[index] = null;
+
+                    sortType |= MapSectionSortType.StillUnits;
+                }
+            }
+
+            if (mapUnit.IsAging)
+            {
+                int index;
+                if (arrayContains(AgingUnits, mapUnit, out index))
+                {
+                    AgingUnits[index] = null;
+
+                    sortType |= MapSectionSortType.AgingUnits;
+                }
+            }
+
+            if (mapUnit.Kind == UnitKind.PlayerShip // Check first cause most used
+                || mapUnit.Kind == UnitKind.PlayerBase
+                || mapUnit.Kind == UnitKind.PlayerDrone
+                || mapUnit.Kind == UnitKind.PlayerPlatform
+                || mapUnit.Kind == UnitKind.PlayerProbe)
+            {
+                int index;
+                if (arrayContains(PlayerUnits, mapUnit, out index))
+                {
+                    PlayerUnits[index] = null;
+
+                    sortType |= MapSectionSortType.PlayerUnits;
+                }
+            }
+
+            if (sortType != MapSectionSortType.None)
+            {
+                Sort(sortType);
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -165,8 +219,8 @@ namespace YAFBCore.Mapping
 
                 for (int i = 0; i < AgingUnits.Length; i++)
                 {
-                    if (i == 0)
-                        Debug.Assert(AgingUnits[i] != null);
+                    //if (i == 0)
+                    //    Debug.Assert(AgingUnits[i] != null);
 
                     if (AgingUnits[i] == null)
                     {
@@ -176,10 +230,22 @@ namespace YAFBCore.Mapping
                 }
             }
 
-            //if ((sortValue & 0x0100) == 0x0100)
-            //{
-            //    // TODO: PlayerUnits sorter
-            //}
+            if ((sortValue & 0x0100) == 0x0100)
+            {
+                Array.Sort(PlayerUnits, 0, playerCount, AgeComparer.Default);
+
+                for (int i = 0; i < PlayerUnits.Length; i++)
+                {
+                    //if (i == 0)
+                    //    Debug.Assert(AgingUnits[i] != null);
+
+                    if (PlayerUnits[i] == null)
+                    {
+                        playerCount = i;
+                        break;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -192,7 +258,9 @@ namespace YAFBCore.Mapping
             {
                 MapSectionRaster raster;
                 if (!rasterList.TryGetValue(tileSize, out raster))
-                    rasterList[tileSize] = raster = MapSectionRaster.Rasterize(this, tileSize);
+                    rasterList[tileSize] = raster = MapSectionRaster.Rasterize(this, tileSize); 
+
+                // TODO: Here should an update of the raster happen if it's already created
 
                 return raster;
             });

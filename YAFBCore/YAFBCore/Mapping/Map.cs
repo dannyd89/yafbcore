@@ -15,8 +15,8 @@ using YAFBCore.Pathfinding.AStarPathing;
 
 namespace YAFBCore.Mapping
 {
-
-    // TODO: Map has to be internal
+    public delegate void MapUpdatedEventHandler(Map map);
+    
     public class Map : IDisposable, IComparable<Map>
     {
         #region Fields and Properties
@@ -121,6 +121,35 @@ namespace YAFBCore.Mapping
             get => isUpdated;
             set => isUpdated = value;
         }
+
+        /// <summary>
+        /// List of ships observing this map for updates
+        /// </summary>
+        private List<Controllables.Ship> observer = new List<Controllables.Ship>();
+        #endregion
+
+        #region Events
+        private MapUpdatedEventHandler _updatedEventHandler;
+        /// <summary>
+        /// Called when the unit data of the map has changed
+        /// </summary>
+        public event MapUpdatedEventHandler Updated
+        {
+            add
+            {
+                _updatedEventHandler += value;
+
+                if (value.Target is Controllables.Ship)
+                    observer.Add((Controllables.Ship)value.Target);
+            }
+            remove
+            {
+                _updatedEventHandler -= value;
+
+                if (value.Target is Controllables.Ship)
+                    observer.Remove((Controllables.Ship)value.Target);
+            }
+        }
         #endregion
 
         #region Constructors or Create functions
@@ -176,6 +205,7 @@ namespace YAFBCore.Mapping
                         map.stillUnits.Add(mapUnit.Name, mapUnit);
                 }
 
+                // TODO: Das könnte optimiert werden, dass es nicht bei jedem Map Create aufgerufen wird, stattdessen im MapManager nach dem Merge
                 lock (map.syncPathFinders)
                     map.pathFinders.Add(creator.NeededTileSize, new AStarPathfinder(creator.NeededTileSize));
 
@@ -292,6 +322,18 @@ namespace YAFBCore.Mapping
                 //if (mapSection.PlayerCount > 0)
                 //    addOrUpdateUnits(mapSection.PlayerUnits, positionOffset);
             }
+            
+            for (int i = other.observer.Count - 1; i >= 0; i--)
+                if (!observer.Contains(other.observer[i]))
+                {
+                    lock (syncPathFinders)
+                        lock (other.syncPathFinders)
+                            if (!pathFinders.ContainsKey(other.observer[i].NeededTileSize))
+                                pathFinders.Add(observer[i].NeededTileSize, new AStarPathfinder(observer[i].NeededTileSize));
+
+                    Updated += other.observer[i].Map_MapUpdated;
+                    other.Updated -= other.observer[i].Map_MapUpdated;
+                }
 
             return true;
         }
@@ -326,14 +368,42 @@ namespace YAFBCore.Mapping
                         Debug.Assert(mapUnit != null);
 
                         if (!mapUnit.Age())
+                        {
                             mapSection.AgingUnits[x] = null;
+
+                            if (mapUnit is PlayerShipMapUnit)
+                                for(int p = 0; p < mapSection.PlayerCount; p++)
+                                {
+                                    Debug.Assert(mapSection.PlayerUnits[p] != null);
+
+                                    if (mapSection.PlayerUnits[p].Name == mapUnit.Name)
+                                        mapSection.PlayerUnits[p] = null;
+                                }
+                        }
                     }
 
-                    mapSection.Sort(MapSectionSortType.AgingUnits);
+                    mapSection.Sort(MapSectionSortType.AgingUnits | MapSectionSortType.PlayerUnits);
 
                     isUpdated = true;
                 }
             }
+        }
+
+        /// <summary>
+        /// MapManager raises the Updated event with this function
+        /// </summary>
+        internal void RaiseUpdated()
+        {
+            lock (syncPathFinders)
+                if (isUpdated)
+                {
+                    isUpdated = false;
+
+                    foreach (AStarPathfinder pathfinder in pathFinders.Values)
+                        pathfinder.UpdateRasterAsync(mapSections);
+
+                    _updatedEventHandler?.Invoke(this);
+                }
         }
 
         /// <summary>
@@ -358,8 +428,9 @@ namespace YAFBCore.Mapping
             List<MapUnit> mapUnits = new List<MapUnit>(300);
 
             int startIndex = getMapSectionIndex(viewport.Left, viewport.Top);
-            int maxIndex = getMapSectionIndex(viewport.Bottom, viewport.Right);
+            int maxIndex = getMapSectionIndex(viewport.Right, viewport.Bottom);
 
+            int playerCount = 0;
             for (int i = startIndex; i <= maxIndex; i++)
             {
                 MapSection mapSection = mapSections[i];
@@ -371,13 +442,26 @@ namespace YAFBCore.Mapping
 
                     for (int x = 0; x < mapSection.AgingCount; x++)
                         if (!mapUnits.Contains(mapSection.AgingUnits[x]))
+                        {
                             mapUnits.Add(mapSection.AgingUnits[x]);
+
+                            if (mapSection.AgingUnits[x] is PlayerShipMapUnit)
+                                playerCount++;
+                        }
 
                     for (int x = 0; x < mapSection.PlayerCount; x++)
                         if (!mapUnits.Contains(mapSection.PlayerUnits[x]))
+                        {
                             mapUnits.Add(mapSection.PlayerUnits[x]);
+                            playerCount++;
+                        }
                 }
             }
+
+            if (playerCount == 0)
+                Debug.WriteLine("Player not found");
+
+            //Debug.WriteLine("Startindex: " + startIndex + " maxIndex: " + maxIndex + " returning unit count: " + mapUnits.Count + " for map (#" + Id.ToString().PadLeft(4, '0') + ")");
 
             return mapUnits;
         }
@@ -577,7 +661,13 @@ namespace YAFBCore.Mapping
                 if (mapUnit.IsOrbiting)
                     mapUnit.OrbitingCenter = positionOffset + mapUnit.OrbitingCenter;
 
-                mapSections[getMapSectionIndex(mapUnit.PositionInternal)].AddOrUpdate(mapUnit);
+                int currentIndex = getMapSectionIndex(mapUnit.PositionInternal);
+
+                for (int a = 0; a < mapSections.Length; a++)
+                    if (a != currentIndex && mapSections[a].Remove(mapUnit))
+                        break;
+
+                mapSections[currentIndex].AddOrUpdate(mapUnit);
             }
         }
 

@@ -6,7 +6,7 @@ using YAFBCore.Networking;
 
 namespace YAFBCore.Controllables
 {
-    public abstract class Controllable : IDisposable
+    public abstract class Controllable : IDisposable, IEquatable<Controllable>
     {
         /// <summary>
         /// Active session
@@ -144,9 +144,54 @@ namespace YAFBCore.Controllables
             Session.RemoveFlowControl(flowControl);
 
             while (workerThread.ThreadState == ThreadState.Running)
-                Thread.Sleep(10);
+                Thread.Sleep(50);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="command"></param>
         public virtual void Queue(Commands.Command command) { }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public bool Equals(Controllable other)
+        {
+            if (other == null)
+                return false;
+
+            return Name == other.Name;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as Controllable);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            return Name;
+        }
     }
 }

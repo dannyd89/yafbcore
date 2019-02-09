@@ -9,17 +9,9 @@ using YAFBCore.Networking;
 
 namespace YAFBCore.Mapping
 {
-    public delegate void MapUpdatedEventHandler(Map map);
 
     public class MapManager : IDisposable
     {
-        #region Events
-        /// <summary>
-        /// Called when the unit data of the map has changed
-        /// </summary>
-        public event MapUpdatedEventHandler MapUpdated;
-        #endregion
-
         #region Fields and Properties
         /// <summary>
         /// The session this manager was created in
@@ -59,7 +51,7 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// Wait event so anything can wait for the map manager to do its work
         /// </summary>
-        private ManualResetEventSlim waitEvent = new ManualResetEventSlim(false);
+        private ManualResetEventSlim waitMergeEvent = new ManualResetEventSlim(false);
 
         /// <summary>
         /// Determines if this manager is disposed
@@ -213,7 +205,7 @@ namespace YAFBCore.Mapping
                     mainMaps = null;
                     universeSortedMaps = null;
 
-                    waitEvent.Dispose();
+                    waitMergeEvent.Dispose();
                 }
         }
 
@@ -235,12 +227,12 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// Enables to wait for the manager to signal if the maps are up2date
         /// </summary>
-        internal void Wait()
+        internal void WaitMerge()
         {
             if (isDisposed)
                 throw new ObjectDisposedException("MapManager is already disposed");
 
-            waitEvent.Wait();
+            waitMergeEvent.Wait();
         }
 
         /// <summary>
@@ -255,17 +247,16 @@ namespace YAFBCore.Mapping
                         flowControl.PreWait();
 
                         // Age the map because a tick has passed
-                        lock (syncSortedMapsObj)
-                            foreach (KeyValuePair<string, List<Map>> kvp in universeSortedMaps)
-                                foreach (Map map in kvp.Value)
-                                {
-                                    map.BeginLock();
-                                    map.Age();
-                                    map.EndLock();
-                                }
+                        //lock (syncSortedMapsObj)
+                        //    foreach (KeyValuePair<string, List<Map>> kvp in universeSortedMaps)
+                        //        foreach (Map map in kvp.Value)
+                        //        {
+                        //            map.BeginLock();
+                        //            map.EndLock();
+                        //        }
 
                         // Used to signal that the manager wants to merge
-                        waitEvent.Reset();
+                        waitMergeEvent.Reset();
 
                         // Wait for all ships to finish
                         var ships = Session.ControllablesManager.Ships;
@@ -276,11 +267,14 @@ namespace YAFBCore.Mapping
                             foreach (KeyValuePair<string, List<Map>> kvp in universeSortedMaps)
                             {
                                 List<Map> list = kvp.Value;
-
+                                
                                 if (list.Count > 0)
                                 {
-                                    for (int i = 0; i < list.Count; i++)
-                                        list[i].BeginLock();
+                                    foreach (Map map in list)
+                                    {
+                                        map.BeginLock();
+                                        map.Age();
+                                    }
 
                                     for (int i = 0; i < list.Count; i++)
                                     {
@@ -298,7 +292,7 @@ namespace YAFBCore.Mapping
                                                 if (list[i].Merge(list[n]))
                                                 {
                                                     list[n].Dispose();
-                                                    list.RemoveAt(n);
+                                                    list.RemoveAt(n); // TODO: Think about a better way to do this since RemoveAt can be taxing
 
                                                     merged = true;
                                                 }
@@ -311,22 +305,18 @@ namespace YAFBCore.Mapping
                                     lock (syncMainMapObj)
                                         mainMaps[kvp.Key] = list[0];
 
-                                    for (int i = 0; i < list.Count; i++)
+                                    foreach (Map map in list)
                                     {
-                                        if (list[i].IsUpdated)
-                                        {
-                                            MapUpdated?.Invoke(list[i]);
+                                        if (map.IsUpdated)
+                                            map.RaiseUpdated();
 
-                                            list[i].IsUpdated = false;
-                                        }
-
-                                        list[i].EndLock();
+                                        map.EndLock();
                                     }
                                 }
                             }
 
                         // Manager is done
-                        waitEvent.Set();
+                        waitMergeEvent.Set();
 
                         flowControl.Commit();
                     }

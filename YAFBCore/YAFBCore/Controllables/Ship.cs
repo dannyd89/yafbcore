@@ -7,19 +7,12 @@ using YAFBCore.Controllables.Commands;
 using YAFBCore.Mapping;
 using YAFBCore.Mapping.Units;
 using YAFBCore.Networking;
+using YAFBCore.Pathfinding.AStarPathing;
 
 namespace YAFBCore.Controllables
 {
     public class Ship : Controllable
     {
-        #region Events
-        /// <summary>
-        /// Is called when ship isActive state is set to false
-        /// We want to reregister this ship then in the manager
-        /// </summary>
-        public event EventHandler ActiveStateChanged;
-        #endregion
-
         /// <summary>
         /// Flattiverse ship
         /// </summary>
@@ -34,6 +27,11 @@ namespace YAFBCore.Controllables
         /// Current active map unit of this ship
         /// </summary>
         private PlayerShipMapUnit playerShipMapUnit;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private AStarPathfinder pathfinder;
 
         #region Scanning Fields
         /// <summary>
@@ -98,6 +96,14 @@ namespace YAFBCore.Controllables
         public Flattiverse.Universe Universe => ship.Universe;
         #endregion
 
+        #region Events
+        /// <summary>
+        /// Is called when ship isActive state is set to false
+        /// We want to reregister this ship then in the manager
+        /// </summary>
+        public event EventHandler ActiveStateChanged;
+        #endregion
+
         /// <summary>
         /// Creates a ship controllable
         /// </summary>
@@ -106,8 +112,6 @@ namespace YAFBCore.Controllables
             : base(universeSession, ship)
         {
             this.ship = ship;
-
-            Session.MapManager.MapUpdated += MapManager_MapUpdated;
         }
 
         /// <summary>
@@ -115,7 +119,7 @@ namespace YAFBCore.Controllables
         /// Uses the map where this unit is in
         /// </summary>
         /// <param name="map"></param>
-        private void MapManager_MapUpdated(Map map)
+        internal void Map_MapUpdated(Map map)
         {
             if (map.Universe.Name == ship.Universe.Name
                 && map.TryGetPlayerShip(ship.Name, out playerShipMapUnit))
@@ -160,7 +164,7 @@ namespace YAFBCore.Controllables
                     scan();
 
                     // Let the map manager process all the scanned info
-                    Session.MapManager.Wait();
+                    Session.MapManager.WaitMerge();
 
                     //Stopwatch sw = Stopwatch.StartNew();
 
@@ -241,7 +245,10 @@ namespace YAFBCore.Controllables
                         && (scanReference == null || scannedUnits[i].Position.Length < scanReference.Length))
                         scanReference = scannedUnits[i].Position;
 
-                Session.MapManager.Add(Map.Create(this, scannedUnits));
+                Map map = Map.Create(this, scannedUnits);
+                map.Updated += Map_MapUpdated;
+
+                Session.MapManager.Add(map);
             }
             catch (Exception ex)
             {
@@ -267,8 +274,9 @@ namespace YAFBCore.Controllables
                 lock (syncMoveCommands)
                     if (moveCommands.Count > 0)
                         lastMoveCommand = moveCommands.Dequeue();
-                    else
-                        lastMoveCommand = new MoveCommand(playerShipMapUnit.PositionInternal.X, playerShipMapUnit.PositionInternal.Y);
+
+                if (lastMoveCommand == null)
+                    lastMoveCommand = new MoveCommand(playerShipMapUnit.PositionInternal.X, playerShipMapUnit.PositionInternal.Y);
 
                 movement = lastMoveCommand.Position - playerShipMapUnit.PositionInternal;
 
