@@ -11,7 +11,7 @@ using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using YAFBCore.Utils.Mathematics;
-using YAFBCore.Pathfinding.AStarPathing;
+using YAFBCore.Pathfinding.Pathfinders;
 
 namespace YAFBCore.Mapping
 {
@@ -53,7 +53,7 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// List of path finders with specific tile sizes
         /// </summary>
-        private Dictionary<int, AStarPathfinder> pathFinders = new Dictionary<int, AStarPathfinder>();
+        private Dictionary<int, MapPathfinder> pathFinders = new Dictionary<int, MapPathfinder>();
 
         /// <summary>
         /// 
@@ -207,7 +207,7 @@ namespace YAFBCore.Mapping
 
                 // TODO: Das könnte optimiert werden, dass es nicht bei jedem Map Create aufgerufen wird, stattdessen im MapManager nach dem Merge
                 lock (map.syncPathFinders)
-                    map.pathFinders.Add(creator.NeededTileSize, new AStarPathfinder(creator.NeededTileSize));
+                    map.pathFinders.Add(creator.NeededTileSize, new MapPathfinder(creator.NeededTileSize, map));
 
                 mapUnit = MapUnitFactory.GetMapUnit(map, creator.Base, movementOffset);
                 map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal)].AddOrUpdate(mapUnit);
@@ -233,10 +233,10 @@ namespace YAFBCore.Mapping
         /// </summary>
         public void BeginLock()
         {
+            lockMapEvent.WaitOne();
+
             if (isDisposed)
                 throw new ObjectDisposedException("Map is already disposed");
-
-            lockMapEvent.WaitOne();
 
             lockingThreadId = Thread.CurrentThread.ManagedThreadId;
             isLocked = true;
@@ -272,10 +272,10 @@ namespace YAFBCore.Mapping
 
             if (lockingThreadId != other.lockingThreadId || lockingThreadId != Thread.CurrentThread.ManagedThreadId)
                 throw new InvalidOperationException("Another thread is currently locking this, please aquire your own lock");
-#endif
 
             if (Universe.Name != other.Universe.Name)
                 return false;
+#endif
 
             Vector positionOffset = null;
 
@@ -318,9 +318,6 @@ namespace YAFBCore.Mapping
 
                     isUpdated = true;
                 }
-
-                //if (mapSection.PlayerCount > 0)
-                //    addOrUpdateUnits(mapSection.PlayerUnits, positionOffset);
             }
             
             for (int i = other.observer.Count - 1; i >= 0; i--)
@@ -329,7 +326,7 @@ namespace YAFBCore.Mapping
                     lock (syncPathFinders)
                         lock (other.syncPathFinders)
                             if (!pathFinders.ContainsKey(other.observer[i].NeededTileSize))
-                                pathFinders.Add(observer[i].NeededTileSize, new AStarPathfinder(observer[i].NeededTileSize));
+                                pathFinders.Add(observer[i].NeededTileSize, new MapPathfinder(observer[i].NeededTileSize, this));
 
                     Updated += other.observer[i].Map_MapUpdated;
                     other.Updated -= other.observer[i].Map_MapUpdated;
@@ -399,7 +396,7 @@ namespace YAFBCore.Mapping
                 {
                     isUpdated = false;
 
-                    foreach (AStarPathfinder pathfinder in pathFinders.Values)
+                    foreach (MapPathfinder pathfinder in pathFinders.Values)
                         pathfinder.UpdateRasterAsync(mapSections);
 
                     _updatedEventHandler?.Invoke(this);
@@ -509,7 +506,7 @@ namespace YAFBCore.Mapping
         /// If tile size is unknown an exception will happen
         /// </summary>
         /// <param name="tileSize">Requested tile size of the path finder</param>
-        public AStarPathfinder GetPathFinder(int tileSize)
+        public MapPathfinder GetPathFinder(int tileSize)
         {
             if (isDisposed)
                 throw new InvalidOperationException("Map is already disposed");

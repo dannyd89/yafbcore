@@ -7,7 +7,7 @@ using YAFBCore.Controllables.Commands;
 using YAFBCore.Mapping;
 using YAFBCore.Mapping.Units;
 using YAFBCore.Networking;
-using YAFBCore.Pathfinding.AStarPathing;
+using YAFBCore.Pathfinding.Pathfinders;
 
 namespace YAFBCore.Controllables
 {
@@ -31,7 +31,7 @@ namespace YAFBCore.Controllables
         /// <summary>
         /// 
         /// </summary>
-        private AStarPathfinder pathfinder;
+        private MapPathfinder pathfinder;
 
         #region Scanning Fields
         /// <summary>

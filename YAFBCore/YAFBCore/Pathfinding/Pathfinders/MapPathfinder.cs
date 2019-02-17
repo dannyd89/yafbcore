@@ -5,10 +5,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using YAFBCore.Mapping;
 
-namespace YAFBCore.Pathfinding.AStarPathing
+namespace YAFBCore.Pathfinding.Pathfinders
 {
-    public sealed class AStarPathfinder
+    public sealed class MapPathfinder
     {
+        /// <summary>
+        /// Map this pathfinder is running on
+        /// </summary>
+        internal readonly Map Map;
+
         /// <summary>
         /// Tile size this path finder is based on
         /// </summary>
@@ -25,17 +30,13 @@ namespace YAFBCore.Pathfinding.AStarPathing
         private ManualResetEvent waitEvent = new ManualResetEvent(false);
 
         /// <summary>
-        /// 
-        /// </summary>
-        public bool IsReady { get; private set; }
-
-        /// <summary>
         /// Creates a 
         /// </summary>
         /// <param name="rasters"></param>
-        internal AStarPathfinder(int tileSize)
+        internal MapPathfinder(int tileSize, Map map)
         {
             TileSize = tileSize;
+            Map = map;
         }
 
         /// <summary>
@@ -44,18 +45,7 @@ namespace YAFBCore.Pathfinding.AStarPathing
         /// <param name="mapSections"></param>
         internal void UpdateRasterAsync(MapSection[] mapSections)
         {
-            waitEvent.Reset();
-            IsReady = false;
-
             ThreadPool.QueueUserWorkItem(update, mapSections);
-        }
-
-        /// <summary>
-        /// Waits until the path finder is ready to be used
-        /// </summary>
-        public void WaitReady()
-        {
-            waitEvent.WaitOne();
         }
 
         /// <summary>
@@ -64,7 +54,11 @@ namespace YAFBCore.Pathfinding.AStarPathing
         /// <param name="arg"></param>
         private void update(object arg)
         {
+            waitEvent.WaitOne();
+            waitEvent.Reset();
+
             MapSection[] mapSections = (MapSection[])arg;
+            MapSectionRaster[] tempRasters = new MapSectionRaster[mapSections.Length];
 
             Task<MapSectionRaster>[] tasks = new Task<MapSectionRaster>[mapSections.Length];
             for (int i = 0; i < mapSections.Length; i++)
@@ -72,12 +66,13 @@ namespace YAFBCore.Pathfinding.AStarPathing
 
             Task.WaitAll(tasks);
 
-            // TODO: I dont think that we need to do this if we have the same amount of rasters
-            if (rasters == null || rasters.Length != mapSections.Length)
+            tempRasters = new MapSectionRaster[mapSections.Length];
+            for (int i = 0; i < tempRasters.Length; i++)
+                tempRasters[i] = tasks[i].Result;
+
+            for (int i = 0; i < tempRasters.Length; i++)
             {
-                rasters = new MapSectionRaster[mapSections.Length];
-                for (int i = 0; i < rasters.Length; i++)
-                    rasters[i] = tasks[i].Result;
+
             }
 
             waitEvent.Set();

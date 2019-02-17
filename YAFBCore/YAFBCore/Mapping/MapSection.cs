@@ -1,5 +1,6 @@
 ﻿using Flattiverse;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -91,7 +92,7 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// Raster list for each size
         /// </summary>
-        private Dictionary<int, MapSectionRaster> rasterList = new Dictionary<int, MapSectionRaster>();
+        private ConcurrentDictionary<int, MapSectionRaster> rasterList = new ConcurrentDictionary<int, MapSectionRaster>(Environment.ProcessorCount * 2, 4);
 
         /// <summary>
         /// Creates a map section
@@ -256,18 +257,15 @@ namespace YAFBCore.Mapping
         {
             return System.Threading.Tasks.Task.Run(() =>
             {
-                MapSectionRaster raster;
-                if (!rasterList.TryGetValue(tileSize, out raster))
-                    rasterList[tileSize] = raster = MapSectionRaster.Rasterize(this, tileSize); 
+                MapSectionRaster raster = MapSectionRaster.Rasterize(this, tileSize);
 
-                // TODO: Here should an update of the raster happen if it's already created
-
-                return raster;
+                return rasterList.AddOrUpdate(tileSize, raster, (key, oldValue) => raster);
             });
         }
 
         /// <summary>
         /// Searches in the array for the passed unit
+        /// Requires the array to be sorted, so no nulls are in between
         /// </summary>
         /// <param name="array">Array to search in</param>
         /// <param name="mapUnit">Unit to be searched</param>

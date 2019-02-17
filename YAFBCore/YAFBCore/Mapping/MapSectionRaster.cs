@@ -16,6 +16,7 @@ namespace YAFBCore.Mapping
     {
         internal readonly MapSection MapSection;
         internal readonly MapSectionRasterTile[] Tiles;
+        internal readonly List<MapSectionRasterTile> ConnectingTiles;
         internal readonly int TileSize;
         internal readonly int Width;
         internal readonly int Height;
@@ -31,10 +32,11 @@ namespace YAFBCore.Mapping
         /// <param name="size"></param>
         /// <param name="width"></param>
         /// <param name="height"></param>
-        private MapSectionRaster(MapSection mapSection, MapSectionRasterTile[] tiles, int size, int width, int height)
+        private MapSectionRaster(MapSection mapSection, MapSectionRasterTile[] tiles, List<MapSectionRasterTile> connectingTiles, int size, int width, int height)
         {
             MapSection = mapSection;
             Tiles = tiles;
+            ConnectingTiles = connectingTiles;
             TileSize = size;
             Width = width;
             Height = height;
@@ -55,22 +57,25 @@ namespace YAFBCore.Mapping
         {
             Stopwatch sw = Stopwatch.StartNew();
 
-            int width = (int)(Math.Abs(mapSection.Left) + mapSection.Right + 0.5f);
-            int height = (int)(Math.Abs(mapSection.Top) + mapSection.Bottom + 0.5f);
-            int mapRasterWidth = (int)((float)width / (float)tileSize + 0.5f);
-            int mapRasterHeight = (int)((float)height / (float)tileSize + 0.5f);
+            float width = Math.Abs(mapSection.Left) + mapSection.Right;
+            float height = Math.Abs(mapSection.Top) + mapSection.Bottom;
+            int mapRasterWidth = (int)(width / tileSize + 0.5f);
+            int mapRasterHeight = (int)(height / tileSize + 0.5f);
 
             int startX = (int)(mapSection.Left + 0.5f);
             int startY = (int)(mapSection.Top + 0.5f);
 
             MapSectionRasterTile[] mapRasterTiles = new MapSectionRasterTile[mapRasterWidth * mapRasterHeight];
+            List<MapSectionRasterTile> connectingTiles = new List<MapSectionRasterTile>();
 
             MapUnit[] stillUnits = mapSection.StillUnits;
             for (int i = 0; i < mapRasterTiles.Length; i++)
             {
+                int xIndex = i % mapRasterWidth, yIndex = i / mapRasterWidth;
+
                 var tile = new MapSectionRasterTile();
-                tile.X = startX + tileSize * (i % mapRasterWidth);
-                tile.Y = startY + tileSize * (i / mapRasterWidth);
+                tile.X = startX + tileSize * xIndex;
+                tile.Y = startY + tileSize * yIndex;
 
                 for (int unitIndex = 0; unitIndex < stillUnits.Length; unitIndex++)
                 {
@@ -89,12 +94,19 @@ namespace YAFBCore.Mapping
                         tile.Status = MapSectionRasterTileStatus.Blocked;
                 }
 
+                if (tile.Status != MapSectionRasterTileStatus.Blocked
+                    && (xIndex == 0 || yIndex == 0))
+                {
+                    tile.Status |= MapSectionRasterTileStatus.Connecting;
+                    connectingTiles.Add(tile);
+                }
+
                 mapRasterTiles[i] = tile;
             }
 
             Console.WriteLine("Raster time: " + sw.Elapsed);
             
-            return new MapSectionRaster(mapSection, mapRasterTiles, tileSize, mapRasterWidth, mapRasterHeight);
+            return new MapSectionRaster(mapSection, mapRasterTiles, connectingTiles, tileSize, mapRasterWidth, mapRasterHeight);
         }
 
         /// <summary>
@@ -108,15 +120,10 @@ namespace YAFBCore.Mapping
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool intersects(MapSectionRasterTile tile, int tileSize, Vector position, float radius)
         {
-            float x = position.X, y = position.Y;
-
             // Find the closest point to the circle within the rectangle
-            //float closestX = MathUtil.Clamp(x, tile.X, tile.X + tileSize);
-            //float closestY = MathUtil.Clamp(y, tile.Y, tile.Y + tileSize);
-
             // Calculate the distance between the circle's center and this closest point
-            float distanceX = x - MathUtil.Clamp(x, tile.X, tile.X + tileSize);
-            float distanceY = y - MathUtil.Clamp(y, tile.Y, tile.Y + tileSize);
+            float distanceX = position.X - MathUtil.Clamp(position.X, tile.X, tile.X + tileSize);
+            float distanceY = position.Y - MathUtil.Clamp(position.Y, tile.Y, tile.Y + tileSize);
 
             // If the distance is less than the circle's radius, an intersection occurs
             return (distanceX * distanceX) + (distanceY * distanceY) < (radius * radius);
