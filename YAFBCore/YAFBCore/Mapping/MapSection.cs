@@ -114,6 +114,10 @@ namespace YAFBCore.Mapping
             {
                 if (!arrayContains(StillUnits, mapUnit, out _))
                     addInternal(ref StillUnits, ref stillCount, mapUnit);
+                //else
+                //{
+                    // TODO: update mapsection rasters here?
+                //}
             }
 
             if (mapUnit.IsAging)
@@ -257,7 +261,7 @@ namespace YAFBCore.Mapping
         {
             return System.Threading.Tasks.Task.Run(() =>
             {
-                MapSectionRaster raster = MapSectionRaster.Rasterize(this, tileSize);
+                MapSectionRaster raster = new MapSectionRaster(this, tileSize);
 
                 return rasterList.AddOrUpdate(tileSize, raster, (key, oldValue) => raster);
             });

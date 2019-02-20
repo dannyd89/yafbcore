@@ -33,7 +33,7 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// Defines the width and height of a section
         /// </summary>
-        internal const int SectionSize = 2048;
+        internal const int SectionSize = 1024;
 
         /// <summary>
         /// The universe this map belongs to
@@ -397,7 +397,7 @@ namespace YAFBCore.Mapping
                     isUpdated = false;
 
                     foreach (MapPathfinder pathfinder in pathFinders.Values)
-                        pathfinder.UpdateRasterAsync(mapSections);
+                        pathfinder.UpdateRasterAsync(mapSections, sectionCount);
 
                     _updatedEventHandler?.Invoke(this);
                 }
@@ -589,10 +589,10 @@ namespace YAFBCore.Mapping
                 for (int y = 0; y < tempCount; y++)
                     for (int x = 0; x < tempCount; x++)
                     {
-                        if (y == 0 || y == tempCount - 1 && x == 0 || x == tempCount - 1)
-                            temp[x * y] = new MapSection(this, new RectangleF(transformator.Rev(x), transformator.Rev(y), SectionSize, SectionSize));
+                        if (y == 0 || y == tempCount - 1 || x == 0 || x == tempCount - 1)
+                            temp[x + y * tempCount] = new MapSection(this, new RectangleF(transformator.Rev(x), transformator.Rev(y), SectionSize, SectionSize));
                         else
-                            temp[x * y] = mapSections[(x - 1) * (y - 1)];
+                            temp[x + y * tempCount] = mapSections[(x - 1) + (y - 1) * sectionCount];
                     }
 
                 sectionCount = tempCount;
@@ -608,23 +608,23 @@ namespace YAFBCore.Mapping
         /// <returns></returns>
         private int getMapSectionIndex(float x, float y)
         {
-            float posX;
-            float posY;
+            int posX;
+            int posY;
 
             bool check = false;
             do
             {
-                posX = transformator[x];
-                posY = transformator[y];
+                posX = (int)(transformator[x] + 0.1f);
+                posY = (int)(transformator[y] + 0.1f);
 
-                check = posX < 0f || posX > sectionCount || posY < 0f || posY > sectionCount;
+                check = posX < 0 || posX >= sectionCount || posY < 0 || posY >= sectionCount;
 
                 if (check)
                     enlargeMap();
 
             } while (check);
 
-            return (int)posX + (int)posY * sectionCount;
+            return posX + posY * sectionCount;
         }
 
         /// <summary>

@@ -16,62 +16,44 @@ namespace YAFBCore.Mapping
     {
         internal readonly MapSection MapSection;
         internal readonly MapSectionRasterTile[] Tiles;
-        internal readonly List<MapSectionRasterTile> ConnectingTiles;
+
+        internal readonly MapSectionRasterConnectingTile[] TopConnectingTiles;
+        internal readonly MapSectionRasterConnectingTile[] RightConnectingTiles;
+        internal readonly MapSectionRasterConnectingTile[] BottomConnectingTiles;
+        internal readonly MapSectionRasterConnectingTile[] LeftConnectingTiles;
+
         internal readonly int TileSize;
-        internal readonly int Width;
-        internal readonly int Height;
-
-        //private readonly Transformator X;
-        //private readonly Transformator Y;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="mapSection"></param>
-        /// <param name="tiles"></param>
-        /// <param name="size"></param>
-        /// <param name="width"></param>
-        /// <param name="height"></param>
-        private MapSectionRaster(MapSection mapSection, MapSectionRasterTile[] tiles, List<MapSectionRasterTile> connectingTiles, int size, int width, int height)
-        {
-            MapSection = mapSection;
-            Tiles = tiles;
-            ConnectingTiles = connectingTiles;
-            TileSize = size;
-            Width = width;
-            Height = height;
-            
-            //X = new Transformator(mapSection.Left, mapSection.Right, 0, width);
-            //Y = new Transformator(mapSection.Top, mapSection.Bottom, 0, height);
-
-            //System.Threading.ThreadPool.QueueUserWorkItem(weightWorker);
-        }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="mapSection"></param>
         /// <param name="tileSize"></param>
-        /// <returns></returns>
-        public static MapSectionRaster Rasterize(MapSection mapSection, int tileSize)
+        public MapSectionRaster(MapSection mapSection, int tileSize)
         {
-            Stopwatch sw = Stopwatch.StartNew();
+            MapSection = mapSection;
+            TileSize = tileSize;
 
-            float width = Math.Abs(mapSection.Left) + mapSection.Right;
-            float height = Math.Abs(mapSection.Top) + mapSection.Bottom;
-            int mapRasterWidth = (int)(width / tileSize + 0.5f);
-            int mapRasterHeight = (int)(height / tileSize + 0.5f);
+            //Stopwatch sw = Stopwatch.StartNew();
+
+            //float width = mapSection.Left < 0 ? Math.Abs(mapSection.Left) + mapSection.Right : Math.Abs(mapSection.Left - mapSection.Right);
+            //float height = mapSection.Top < 0 ? Math.Abs(mapSection.Top) + mapSection.Bottom : Math.Abs(mapSection.Top - mapSection.Bottom); 
+            int mapRasterSize = (int)((float)Map.SectionSize / tileSize + 0.5f);
 
             int startX = (int)(mapSection.Left + 0.5f);
             int startY = (int)(mapSection.Top + 0.5f);
 
-            MapSectionRasterTile[] mapRasterTiles = new MapSectionRasterTile[mapRasterWidth * mapRasterHeight];
-            List<MapSectionRasterTile> connectingTiles = new List<MapSectionRasterTile>();
+            Tiles = new MapSectionRasterTile[mapRasterSize * mapRasterSize];
+
+            TopConnectingTiles = new MapSectionRasterConnectingTile[mapRasterSize];
+            RightConnectingTiles = new MapSectionRasterConnectingTile[mapRasterSize];
+            BottomConnectingTiles = new MapSectionRasterConnectingTile[mapRasterSize];
+            LeftConnectingTiles = new MapSectionRasterConnectingTile[mapRasterSize];
 
             MapUnit[] stillUnits = mapSection.StillUnits;
-            for (int i = 0; i < mapRasterTiles.Length; i++)
+            for (int i = 0; i < Tiles.Length; i++)
             {
-                int xIndex = i % mapRasterWidth, yIndex = i / mapRasterWidth;
+                int xIndex = i % mapRasterSize, yIndex = i / mapRasterSize;
 
                 var tile = new MapSectionRasterTile();
                 tile.X = startX + tileSize * xIndex;
@@ -88,25 +70,40 @@ namespace YAFBCore.Mapping
                     // die je nachdem einen Bereich als schlecht oder gut definieren
                     // Sonne z.B. die Koronas als gut, Blackholes der Wirkungskreis als schlecht
 
-                    if (mapUnit.IsSolid 
-                        && mapUnit.Mobility == Mobility.Still 
+                    if (mapUnit.IsSolid
+                        && mapUnit.Mobility == Mobility.Still
                         && intersects(tile, tileSize, mapUnit.PositionInternal, mapUnit.RadiusInternal))
                         tile.Status = MapSectionRasterTileStatus.Blocked;
                 }
 
-                if (tile.Status != MapSectionRasterTileStatus.Blocked
-                    && (xIndex == 0 || yIndex == 0))
+                if (yIndex == 0)
                 {
                     tile.Status |= MapSectionRasterTileStatus.Connecting;
-                    connectingTiles.Add(tile);
+                    TopConnectingTiles[xIndex] = new MapSectionRasterConnectingTile(tile);
                 }
 
-                mapRasterTiles[i] = tile;
+                if (xIndex == 0)
+                {
+                    tile.Status |= MapSectionRasterTileStatus.Connecting;
+                    LeftConnectingTiles[yIndex] = new MapSectionRasterConnectingTile(tile);
+                }
+
+                if (xIndex == (mapRasterSize - 1))
+                {
+                    tile.Status |= MapSectionRasterTileStatus.Connecting;
+                    RightConnectingTiles[yIndex] = new MapSectionRasterConnectingTile(tile);
+                }
+
+                if (yIndex == (mapRasterSize - 1))
+                {
+                    tile.Status |= MapSectionRasterTileStatus.Connecting;
+                    BottomConnectingTiles[xIndex] = new MapSectionRasterConnectingTile(tile);
+                }
+
+                Tiles[i] = tile;
             }
 
-            Console.WriteLine("Raster time: " + sw.Elapsed);
-            
-            return new MapSectionRaster(mapSection, mapRasterTiles, connectingTiles, tileSize, mapRasterWidth, mapRasterHeight);
+            //Console.WriteLine("Raster time: " + sw.Elapsed);
         }
 
         /// <summary>
