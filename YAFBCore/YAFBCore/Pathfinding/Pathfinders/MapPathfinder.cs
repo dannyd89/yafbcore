@@ -1,15 +1,17 @@
-﻿using System;
+﻿using Flattiverse;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using YAFBCore.Controllables.Commands;
 using YAFBCore.Mapping;
 using YAFBCore.Utils;
 
 namespace YAFBCore.Pathfinding.Pathfinders
 {
-    public sealed class MapPathfinder
+    public sealed class MapPathfinder : IDisposable
     {
         /// <summary>
         /// Map this pathfinder is running on
@@ -27,28 +29,50 @@ namespace YAFBCore.Pathfinding.Pathfinders
         private MapSectionRaster[] rasters;
 
         /// <summary>
-        /// Enables to wait for the pathfinder to be ready
+        /// Current count of sections in 1 dimension
         /// </summary>
-        private ManualResetEvent waitEvent = new ManualResetEvent(true);
+        private int currentSectionCount;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private Task<MapSectionRaster>[] tasks;
+
+        /// <summary>
+        /// Enables to wait for the update worker
+        /// </summary>
+        private ManualResetEvent updateResetEvent = new ManualResetEvent(false);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private bool isDisposed;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public bool IsDisposed => isDisposed;
 
         /// <summary>
         /// Creates a 
         /// </summary>
         /// <param name="rasters"></param>
-        internal MapPathfinder(int tileSize, Map map)
+        internal MapPathfinder(int tileSize, Map map, MapSection[] mapSections, int sectionCount)
         {
             TileSize = tileSize;
             Map = map;
+
+            ThreadPool.QueueUserWorkItem(update, new object[] { mapSections, sectionCount });
         }
 
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="mapSections"></param>
-        /// <param name="sectionCount">Count of sections into 1 dimension, mapSections is sectionCount * sectionCount big</param>
-        internal void UpdateRasterAsync(MapSection[] mapSections, int sectionCount)
+        public void Dispose()
         {
-            ThreadPool.QueueUserWorkItem(update, new object[] { mapSections, sectionCount });
+            updateResetEvent.Dispose();
+
+            isDisposed = true;
         }
 
         /// <summary>
@@ -57,80 +81,250 @@ namespace YAFBCore.Pathfinding.Pathfinders
         /// <param name="arg"></param>
         private void update(object arg)
         {
-            Stopwatch sw = Stopwatch.StartNew();
-
-            waitEvent.WaitOne();
-            waitEvent.Reset();
-
-            object[] args = (object[])arg;
-
-            MapSection[] mapSections = (MapSection[])args[0];
-            int sectionCount = (int)args[1];
-
-            MapSectionRaster[] tempRasters = new MapSectionRaster[mapSections.Length];
-
-            Task<MapSectionRaster>[] tasks = new Task<MapSectionRaster>[mapSections.Length];
-            for (int i = 0; i < mapSections.Length; i++)
-                tasks[i] = mapSections[i].GetRaster(TileSize);
-
-            Task.WaitAll(tasks);
-
-            tempRasters = new MapSectionRaster[mapSections.Length];
-            for (int i = 0; i < tempRasters.Length; i++)
-                tempRasters[i] = tasks[i].Result;
-
-            for (int i = 0; i < tempRasters.Length; i++)
+            try
             {
-                int x = i % sectionCount, y = i / sectionCount;
+                //Stopwatch sw = Stopwatch.StartNew();
 
-                if (tempRasters[i].TopConnectingTiles[0].To == null && tryGetMapSectionIndex(sectionCount, x, y - 1, out int topIndex))
+                object[] args = (object[])arg;
+
+                MapSection[] mapSections = (MapSection[])args[0];
+                int sectionCount = (int)args[1];
+                
+                rasters = new MapSectionRaster[mapSections.Length];
+                tasks = new Task<MapSectionRaster>[mapSections.Length];
+
+                for (int i = 0; i < mapSections.Length; i++)
+                    tasks[i] = mapSections[i].GetRaster(TileSize);
+
+                Task.WaitAll(tasks);
+                
+                for (int i = 0; i < rasters.Length; i++)
+                    rasters[i] = tasks[i].Result;
+
+                // Connect all connecting tiles with each other
+                for (int i = 0; i < rasters.Length; i++)
                 {
-                    MapSectionRasterConnectingTile[] bottomTiles = tempRasters[topIndex].BottomConnectingTiles;
+                    int x = i % sectionCount, y = i / sectionCount;
 
-                    for (int tempIndex = 0; tempIndex < bottomTiles.Length; tempIndex++)
+                    if (rasters[i].TopConnectingTiles[0].To == null && tryGetMapSectionRasterIndex(sectionCount, x, y - 1, out int topIndex))
                     {
-                        tempRasters[i].TopConnectingTiles[tempIndex].To = bottomTiles[tempIndex].From;
-                        bottomTiles[tempIndex].To = tempRasters[i].TopConnectingTiles[tempIndex].From;
+                        MapSectionRasterConnectingTile[] bottomTiles = rasters[topIndex].BottomConnectingTiles;
+
+                        for (int tempIndex = 0; tempIndex < bottomTiles.Length; tempIndex++)
+                        {
+                            rasters[i].TopConnectingTiles[tempIndex].To = bottomTiles[tempIndex].From;
+                            bottomTiles[tempIndex].To = rasters[i].TopConnectingTiles[tempIndex].From;
+                        }
+                    }
+
+                    if (rasters[i].RightConnectingTiles[0].To == null && tryGetMapSectionRasterIndex(sectionCount, x + 1, y, out int rightIndex))
+                    {
+                        MapSectionRasterConnectingTile[] leftTiles = rasters[rightIndex].LeftConnectingTiles;
+
+                        for (int tempIndex = 0; tempIndex < leftTiles.Length; tempIndex++)
+                        {
+                            rasters[i].RightConnectingTiles[tempIndex].To = leftTiles[tempIndex].From;
+                            leftTiles[tempIndex].To = rasters[i].RightConnectingTiles[tempIndex].From;
+                        }
+                    }
+
+                    if (rasters[i].BottomConnectingTiles[0].To == null && tryGetMapSectionRasterIndex(sectionCount, x, y + 1, out int bottomIndex))
+                    {
+                        MapSectionRasterConnectingTile[] topTiles = rasters[bottomIndex].TopConnectingTiles;
+
+                        for (int tempIndex = 0; tempIndex < topTiles.Length; tempIndex++)
+                        {
+                            rasters[i].BottomConnectingTiles[tempIndex].To = topTiles[tempIndex].From;
+                            topTiles[tempIndex].To = rasters[i].BottomConnectingTiles[tempIndex].From;
+                        }
+                    }
+
+                    if (rasters[i].LeftConnectingTiles[0].To == null && tryGetMapSectionRasterIndex(sectionCount, x - 1, y, out int leftIndex))
+                    {
+                        MapSectionRasterConnectingTile[] rightTiles = rasters[leftIndex].RightConnectingTiles;
+
+                        for (int tempIndex = 0; tempIndex < rightTiles.Length; tempIndex++)
+                        {
+                            rasters[i].LeftConnectingTiles[tempIndex].To = rightTiles[tempIndex].From;
+                            rightTiles[tempIndex].To = rasters[i].LeftConnectingTiles[tempIndex].From;
+                        }
                     }
                 }
 
-                if (tempRasters[i].RightConnectingTiles[0].To == null && tryGetMapSectionIndex(sectionCount, x + 1, y, out int rightIndex))
-                {
-                    MapSectionRasterConnectingTile[] leftTiles = tempRasters[rightIndex].LeftConnectingTiles;
+                currentSectionCount = sectionCount;
 
-                    for (int tempIndex = 0; tempIndex < leftTiles.Length; tempIndex++)
-                    {
-                        tempRasters[i].RightConnectingTiles[tempIndex].To = leftTiles[tempIndex].From;
-                        leftTiles[tempIndex].To = tempRasters[i].RightConnectingTiles[tempIndex].From;
-                    }
-                }
+                updateResetEvent.Set();
 
-                if (tempRasters[i].BottomConnectingTiles[0].To == null && tryGetMapSectionIndex(sectionCount, x, y + 1, out int bottomIndex))
-                {
-                    MapSectionRasterConnectingTile[] topTiles = tempRasters[bottomIndex].TopConnectingTiles;
-
-                    for (int tempIndex = 0; tempIndex < topTiles.Length; tempIndex++)
-                    {
-                        tempRasters[i].BottomConnectingTiles[tempIndex].To = topTiles[tempIndex].From;
-                        topTiles[tempIndex].To = tempRasters[i].BottomConnectingTiles[tempIndex].From;
-                    }
-                }
-
-                if (tempRasters[i].LeftConnectingTiles[0].To == null && tryGetMapSectionIndex(sectionCount, x - 1, y, out int leftIndex))
-                {
-                    MapSectionRasterConnectingTile[] rightTiles = tempRasters[leftIndex].RightConnectingTiles;
-
-                    for (int tempIndex = 0; tempIndex < rightTiles.Length; tempIndex++)
-                    {
-                        tempRasters[i].LeftConnectingTiles[tempIndex].To = rightTiles[tempIndex].From;
-                        rightTiles[tempIndex].To = tempRasters[i].LeftConnectingTiles[tempIndex].From;
-                    }
-                }
+                //Console.WriteLine("Pathfinder update time: " + sw.Elapsed);
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine("MapPathfinder.update: ");
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);
+            }
+        }
 
-            waitEvent.Set();
+        /// <summary>
+        /// 
+        /// </summary>
+        public LinkedList<MoveCommand> Pathfind(Vector from, Vector to)
+        {
+#if DEBUG
+            try
+            {
+#endif
+                updateResetEvent.WaitOne();
 
-            Console.WriteLine("Pathfinder update time: " + sw.Elapsed);
+                if (isDisposed)
+                    return null;
+
+                float size = (currentSectionCount / 2f) * Map.SectionSize;
+                Transformator transformator = new Transformator(-size, size, 0, currentSectionCount);
+
+                int fromIndex = getMapSectionIndex(transformator, from.X, from.Y);
+                int toIndex = getMapSectionIndex(transformator, to.X, to.Y);
+
+                if (fromIndex == toIndex)
+                {
+                    MapSectionRaster raster = rasters[fromIndex];
+
+                    Transformator rasterX = new Transformator(raster.MapSection.Left, raster.MapSection.Right, 0, raster.Size);
+                    Transformator rasterY = new Transformator(raster.MapSection.Top, raster.MapSection.Bottom, 0, raster.Size);
+
+                    int x = (int)rasterX[from.X], y = (int)rasterY[from.Y];
+
+                    MapSectionRasterTile fromTile = raster.Tiles[x + y * raster.Size];
+                    fromTile.Status |= MapSectionRasterTileStatus.Start;
+
+                    x = (int)rasterX[to.X];
+                    y = (int)rasterY[to.Y];
+
+                    MapSectionRasterTile toTile = raster.Tiles[x + y * raster.Size];
+                    toTile.Status |= MapSectionRasterTileStatus.Finish;
+
+                    PriorityQueue priorityQueue = new PriorityQueue(raster.Tiles.Length);
+
+                    priorityQueue.Enqueue(fromTile, 0f);
+
+                    MapSectionRasterTile currentTile = null;
+
+                    float step = 0f;
+                    while (priorityQueue.Count > 0)
+                    {
+                        currentTile = priorityQueue.Dequeue();
+
+                        if ((currentTile.Status & MapSectionRasterTileStatus.Finish) == MapSectionRasterTileStatus.Finish)
+                        {
+                            Console.WriteLine("Found path to the desired tile");
+                            break;
+                        }
+
+                        // Check top tile
+                        x = (int)rasterX[currentTile.X];
+                        y = (int)rasterY[currentTile.Y - raster.TileSize];
+
+                        if (x >= 0 && x < raster.Size && y >= 0 && y < raster.Size)
+                        {
+                            MapSectionRasterTile topTile = raster.Tiles[x + y * raster.Size];
+
+                            if ((topTile.Status & MapSectionRasterTileStatus.Blocked) != MapSectionRasterTileStatus.Blocked
+                                && (topTile.Status & MapSectionRasterTileStatus.Checked) != MapSectionRasterTileStatus.Checked)
+                            {
+                                topTile.ParentX = currentTile.X;
+                                topTile.ParentY = currentTile.Y;
+
+                                priorityQueue.Enqueue(topTile, step + 2f * (Math.Abs(topTile.X - toTile.X) + Math.Abs(topTile.Y - toTile.Y)));
+                            }
+                        }
+
+                        // Check right tile
+                        x = (int)rasterX[currentTile.X + raster.TileSize];
+                        y = (int)rasterY[currentTile.Y];
+
+                        if (x >= 0 && x < raster.Size && y >= 0 && y < raster.Size)
+                        {
+                            MapSectionRasterTile rightTile = raster.Tiles[x + y * raster.Size];
+
+                            if ((rightTile.Status & MapSectionRasterTileStatus.Blocked) != MapSectionRasterTileStatus.Blocked
+                                && (rightTile.Status & MapSectionRasterTileStatus.Checked) != MapSectionRasterTileStatus.Checked)
+                            {
+                                rightTile.ParentX = currentTile.X;
+                                rightTile.ParentY = currentTile.Y;
+
+                                priorityQueue.Enqueue(rightTile, step + 2f * (Math.Abs(rightTile.X - toTile.X) + Math.Abs(rightTile.Y - toTile.Y)));
+                            }
+                        }
+
+                        // Check bottom tile
+                        x = (int)rasterX[currentTile.X];
+                        y = (int)rasterY[currentTile.Y + raster.TileSize];
+
+                        if (x >= 0 && x < raster.Size && y >= 0 && y < raster.Size)
+                        {
+                            MapSectionRasterTile bottomTile = raster.Tiles[x + y * raster.Size];
+
+                            if ((bottomTile.Status & MapSectionRasterTileStatus.Blocked) != MapSectionRasterTileStatus.Blocked
+                                && (bottomTile.Status & MapSectionRasterTileStatus.Checked) != MapSectionRasterTileStatus.Checked)
+                            {
+                                bottomTile.ParentX = currentTile.X;
+                                bottomTile.ParentY = currentTile.Y;
+
+                                priorityQueue.Enqueue(bottomTile, step + 2f * (Math.Abs(bottomTile.X - toTile.X) + Math.Abs(bottomTile.Y - toTile.Y)));
+                            }
+                        }
+
+                        // Check left tile
+                        x = (int)rasterX[currentTile.X - raster.TileSize];
+                        y = (int)rasterY[currentTile.Y];
+
+                        if (x >= 0 && x < raster.Size && y >= 0 && y < raster.Size)
+                        {
+                            MapSectionRasterTile leftTile = raster.Tiles[x + y * raster.Size];
+
+                            if ((leftTile.Status & MapSectionRasterTileStatus.Blocked) != MapSectionRasterTileStatus.Blocked
+                                && (leftTile.Status & MapSectionRasterTileStatus.Checked) != MapSectionRasterTileStatus.Checked)
+                            {
+                                leftTile.ParentX = currentTile.X;
+                                leftTile.ParentY = currentTile.Y;
+
+                                priorityQueue.Enqueue(leftTile, step + 2f * (Math.Abs(leftTile.X - toTile.X) + Math.Abs(leftTile.Y - toTile.Y)));
+                            }
+                        }
+
+                        step++;
+                    }
+
+                    LinkedList<MoveCommand> linkedList = new LinkedList<MoveCommand>();
+                    linkedList.AddFirst(new MoveCommand(to.X, to.Y));
+
+                    while ((currentTile.Status & MapSectionRasterTileStatus.Start) != MapSectionRasterTileStatus.Start)
+                    {
+                        //Console.WriteLine("Current tile: (" + currentTile.X + " / " + currentTile.Y + ")");
+
+                        x = (int)rasterX[currentTile.ParentX];
+                        y = (int)rasterY[currentTile.ParentY];
+
+                        currentTile = raster.Tiles[x + y * raster.Size];
+
+                        linkedList.AddFirst(new MoveCommand(currentTile.X, currentTile.Y));
+                    }
+
+                    return linkedList;
+                }
+                else
+                    return new LinkedList<MoveCommand>(new MoveCommand[] { new MoveCommand(to.X, to.Y) }); // Wut wat is pathfinding Lul
+#if DEBUG
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("MapPathfinder.Pathfind: ");
+                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.StackTrace);
+            }
+#endif
+
+            return null;
         }
 
         /// <summary>
@@ -139,7 +333,7 @@ namespace YAFBCore.Pathfinding.Pathfinders
         /// <param name="x"></param>
         /// <param name="y"></param>
         /// <returns></returns>
-        private bool tryGetMapSectionIndex(int sectionCount, int x, int y, out int index)
+        private bool tryGetMapSectionRasterIndex(int sectionCount, int x, int y, out int index)
         {
             index = -1;
 
@@ -148,6 +342,23 @@ namespace YAFBCore.Pathfinding.Pathfinders
 
             index = x + y * sectionCount;
             return true;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
+        private int getMapSectionIndex(Transformator transformator, float x, float y)
+        {
+            int posX = (int)(transformator[x] + 0.1f);
+            int posY = (int)(transformator[y] + 0.1f);
+
+            Utils.Mathematics.MathUtil.Clamp(posX, 0, currentSectionCount);
+            Utils.Mathematics.MathUtil.Clamp(posY, 0, currentSectionCount);
+
+            return posX + posY * currentSectionCount;
         }
     }
 }

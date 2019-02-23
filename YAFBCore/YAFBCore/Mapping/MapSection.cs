@@ -90,11 +90,6 @@ namespace YAFBCore.Mapping
         public int PlayerCount => playerCount;
 
         /// <summary>
-        /// Raster list for each size
-        /// </summary>
-        private ConcurrentDictionary<int, MapSectionRaster> rasterList = new ConcurrentDictionary<int, MapSectionRaster>(Environment.ProcessorCount * 2, 4);
-
-        /// <summary>
         /// Creates a map section
         /// </summary>
         /// <param name="parent">Parent of this section</param>
@@ -261,9 +256,7 @@ namespace YAFBCore.Mapping
         {
             return System.Threading.Tasks.Task.Run(() =>
             {
-                MapSectionRaster raster = new MapSectionRaster(this, tileSize);
-
-                return rasterList.AddOrUpdate(tileSize, raster, (key, oldValue) => raster);
+                return new MapSectionRaster(this, tileSize);
             });
         }
 

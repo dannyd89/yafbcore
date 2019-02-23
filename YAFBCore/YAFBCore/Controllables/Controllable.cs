@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using YAFBCore.Networking;
+using YAFBCore.Pathfinding.Pathfinders;
 
 namespace YAFBCore.Controllables
 {
@@ -93,7 +94,7 @@ namespace YAFBCore.Controllables
         {
             Session = universeSession;
 
-            this.Base = controllable;
+            Base = controllable;
 
             Name = controllable.Name;
             Class = controllable.Class;
@@ -124,7 +125,7 @@ namespace YAFBCore.Controllables
         /// <summary>
         /// 
         /// </summary>
-        protected virtual void move() { }
+        protected virtual void move(MapPathfinder mapPathfinder) { }
 
         /// <summary>
         /// 

@@ -28,11 +28,6 @@ namespace YAFBCore.Controllables
         /// </summary>
         private PlayerShipMapUnit playerShipMapUnit;
 
-        /// <summary>
-        /// 
-        /// </summary>
-        private MapPathfinder pathfinder;
-
         #region Scanning Fields
         /// <summary>
         /// Current degree the scanner is at
@@ -65,14 +60,22 @@ namespace YAFBCore.Controllables
         /// <summary>
         /// Stores the issued move commands
         /// </summary>
-        private Queue<MoveCommand> moveCommands = new Queue<MoveCommand>();
+        private Queue<MoveCommand> userMoveCommands = new Queue<MoveCommand>();
 
         /// <summary>
         /// Last used move command
         /// </summary>
         private MoveCommand lastMoveCommand;
 
+        /// <summary>
+        /// 
+        /// </summary>
         public Flattiverse.Vector DesiredPosition => lastMoveCommand?.Position;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public LinkedList<MoveCommand> pathfindingMoveCommands;
 
         /// <summary>
         /// Last movement vector
@@ -131,7 +134,9 @@ namespace YAFBCore.Controllables
         /// </summary>
         private void reset()
         {
+            userMoveCommands.Clear();
             lastMoveCommand = null;
+            pathfindingMoveCommands = null;
 
             resetWaiters();
         }
@@ -155,6 +160,7 @@ namespace YAFBCore.Controllables
 
             while (!isDisposed)
             {
+                MapPathfinder mapPathfinder = null;
                 try
                 {
                     // Wait for the game to calculate the next tick
@@ -174,15 +180,18 @@ namespace YAFBCore.Controllables
                     //Pathfinding.AStarPathing.AStarPathfinder pathFinder = task.Result;
                     //currentMap.EndLock();
 
-                    //Console.WriteLine("Rasterizing time: " + sw.Elapsed);
+                    // TODO: Wäre vielleicht besser das direkt in der move Funktion zu machen, dass nicht immer ein neuer Pathfinder erzeugt wird
+                    mapPathfinder = currentMap.GetPathFinder(NeededTileSize);
 
-                    // Perform any move command if available
-                    move();
+                    //Console.WriteLine("Rasterizing time: " + sw.Elapsed);
 
                     // Perform any shoot command if available
                     shoot();
 
-                    // Commit actions queued this tick
+                    // Perform any move command if available
+                    move(mapPathfinder);
+
+                    // Commit actions queued by this tick
                     flowControl.FlowControl.Commit();
 
                     // Reset all waiters
@@ -195,6 +204,11 @@ namespace YAFBCore.Controllables
 
                     Debug.WriteLine($"{ship.Name}: Worker Exception");
                     Debug.WriteLine(ex.Message);
+                }
+                finally
+                {
+                    if (mapPathfinder != null)
+                        mapPathfinder.Dispose();
                 }
             }
         }
@@ -267,13 +281,30 @@ namespace YAFBCore.Controllables
         /// <summary>
         /// 
         /// </summary>
-        protected override void move()
+        protected override void move(MapPathfinder mapPathfinder)
         {
             try
             {
+                if (lastMoveCommand != null && (lastMoveCommand.Position - playerShipMapUnit.PositionInternal) < NeededTileSize)
+                        lastMoveCommand.Reached = true;
+
                 lock (syncMoveCommands)
-                    if (moveCommands.Count > 0)
-                        lastMoveCommand = moveCommands.Dequeue();
+                {
+                    if (userMoveCommands.Count > 0)
+                    {
+                        lastMoveCommand = userMoveCommands.Dequeue();
+
+                        pathfindingMoveCommands = mapPathfinder.Pathfind(playerShipMapUnit.Position, lastMoveCommand.Position);
+
+                        lastMoveCommand = null;
+                    }
+
+                    if ((lastMoveCommand == null || lastMoveCommand.Reached) && pathfindingMoveCommands != null && pathfindingMoveCommands.Count > 0)
+                    {
+                        lastMoveCommand = pathfindingMoveCommands.First.Value;
+                        pathfindingMoveCommands.RemoveFirst();
+                    }
+                }
 
                 if (lastMoveCommand == null)
                     lastMoveCommand = new MoveCommand(playerShipMapUnit.PositionInternal.X, playerShipMapUnit.PositionInternal.Y);
@@ -293,12 +324,15 @@ namespace YAFBCore.Controllables
                     movement.Length = ship.EngineAcceleration.Limit * 0.99f;
 
                 ship.Move(movement);
-
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"{ship.Name}: Move Exception");
                 Debug.WriteLine(ex.Message);
+
+                userMoveCommands.Clear();
+                lastMoveCommand = null;
+                pathfindingMoveCommands = null;
             }
             finally
             {
@@ -362,6 +396,8 @@ namespace YAFBCore.Controllables
         {
             try
             {
+                reset();
+
                 if (!ship.IsActive)
                 {
                     ActiveStateChanged?.Invoke(this, EventArgs.Empty);
@@ -369,11 +405,7 @@ namespace YAFBCore.Controllables
                 }
 
                 if (!ship.IsAlive)
-                {
-                    reset();
-
                     ship.Continue();
-                }
 
                 return true;
             }
@@ -395,7 +427,7 @@ namespace YAFBCore.Controllables
             {
                 case MoveCommand moveCommand:
                     lock (syncMoveCommands)
-                        moveCommands.Enqueue(moveCommand);
+                        userMoveCommands.Enqueue(moveCommand);
                     break;
                 default:
                     throw new NotSupportedException();

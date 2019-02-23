@@ -132,6 +132,8 @@ namespace YAFBCore.Pathfinding
 #endif
 
             node.Priority = priority;
+            node.Status |= MapSectionRasterTileStatus.Checked;
+
             _numNodes++;
             _nodes[_numNodes] = node;
             node.QueueIndex = _numNodes;

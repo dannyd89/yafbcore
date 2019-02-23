@@ -5,11 +5,11 @@ namespace YAFBCore.Utils
     /// <summary>
     /// This class can transform a coordinate from a source to a target view
     /// </summary>
-    public class Transformator
+    public struct Transformator
     {
-        private float m;
-        private float b;
-        private float t;
+        private readonly float m;
+        private readonly float b;
+        private readonly float t;
 
         public Transformator(float sourceLow, float sourceHigh, float targetLow, float targetHigh)
         {

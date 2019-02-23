@@ -22,11 +22,11 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// X of the parent
         /// </summary>
-        public ushort ParentX;
+        public float ParentX;
         /// <summary>
         /// Y of the parent
         /// </summary>
-        public ushort ParentY;
+        public float ParentY;
         /// <summary>
         /// X Position of this tile in the raster
         /// TODO: See if this is really needed
@@ -56,6 +56,12 @@ namespace YAFBCore.Mapping
         /// The queue this node is tied to. Used only for debug builds.
         /// </summary>
         public object Queue;
+
+        public override string ToString()
+        {
+            return $"({X} / {Y}) Status:{Convert.ToString((byte)Status, 2).PadLeft(8, '0')}";
+        }
 #endif
+
     }
 }

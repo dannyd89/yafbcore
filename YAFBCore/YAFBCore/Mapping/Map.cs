@@ -51,16 +51,6 @@ namespace YAFBCore.Mapping
         private Dictionary<string, PlayerShipMapUnit> ownPlayerUnits = new Dictionary<string, PlayerShipMapUnit>();
 
         /// <summary>
-        /// List of path finders with specific tile sizes
-        /// </summary>
-        private Dictionary<int, MapPathfinder> pathFinders = new Dictionary<int, MapPathfinder>();
-
-        /// <summary>
-        /// 
-        /// </summary>
-        private object syncPathFinders = new object();
-
-        /// <summary>
         /// Map is divided into sections to optimize path finding
         /// </summary>
         private MapSection[] mapSections;
@@ -205,10 +195,6 @@ namespace YAFBCore.Mapping
                         map.stillUnits.Add(mapUnit.Name, mapUnit);
                 }
 
-                // TODO: Das könnte optimiert werden, dass es nicht bei jedem Map Create aufgerufen wird, stattdessen im MapManager nach dem Merge
-                lock (map.syncPathFinders)
-                    map.pathFinders.Add(creator.NeededTileSize, new MapPathfinder(creator.NeededTileSize, map));
-
                 mapUnit = MapUnitFactory.GetMapUnit(map, creator.Base, movementOffset);
                 map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal)].AddOrUpdate(mapUnit);
 
@@ -323,11 +309,6 @@ namespace YAFBCore.Mapping
             for (int i = other.observer.Count - 1; i >= 0; i--)
                 if (!observer.Contains(other.observer[i]))
                 {
-                    lock (syncPathFinders)
-                        lock (other.syncPathFinders)
-                            if (!pathFinders.ContainsKey(other.observer[i].NeededTileSize))
-                                pathFinders.Add(observer[i].NeededTileSize, new MapPathfinder(observer[i].NeededTileSize, this));
-
                     Updated += other.observer[i].Map_MapUpdated;
                     other.Updated -= other.observer[i].Map_MapUpdated;
                 }
@@ -391,16 +372,12 @@ namespace YAFBCore.Mapping
         /// </summary>
         internal void RaiseUpdated()
         {
-            lock (syncPathFinders)
-                if (isUpdated)
-                {
-                    isUpdated = false;
+            if (isUpdated)
+            {
+                isUpdated = false;
 
-                    foreach (MapPathfinder pathfinder in pathFinders.Values)
-                        pathfinder.UpdateRasterAsync(mapSections, sectionCount);
-
-                    _updatedEventHandler?.Invoke(this);
-                }
+                _updatedEventHandler?.Invoke(this);
+            }
         }
 
         /// <summary>
@@ -506,20 +483,12 @@ namespace YAFBCore.Mapping
         /// If tile size is unknown an exception will happen
         /// </summary>
         /// <param name="tileSize">Requested tile size of the path finder</param>
-        public MapPathfinder GetPathFinder(int tileSize)
+        internal MapPathfinder GetPathFinder(int tileSize)
         {
             if (isDisposed)
                 throw new InvalidOperationException("Map is already disposed");
 
-            lock (syncPathFinders)
-            {
-#if DEBUG
-                if (!pathFinders.ContainsKey(tileSize))
-                    throw new KeyNotFoundException("Couldn't find path finder with specified tile size");
-#endif
-
-                return pathFinders[tileSize];
-            }
+            return new MapPathfinder(tileSize, this, mapSections, sectionCount);
         }
 
         /// <summary>

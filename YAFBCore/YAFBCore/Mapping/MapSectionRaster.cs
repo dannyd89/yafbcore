@@ -22,6 +22,7 @@ namespace YAFBCore.Mapping
         internal readonly MapSectionRasterConnectingTile[] BottomConnectingTiles;
         internal readonly MapSectionRasterConnectingTile[] LeftConnectingTiles;
 
+        internal readonly int Size;
         internal readonly int TileSize;
 
         /// <summary>
@@ -38,22 +39,22 @@ namespace YAFBCore.Mapping
 
             //float width = mapSection.Left < 0 ? Math.Abs(mapSection.Left) + mapSection.Right : Math.Abs(mapSection.Left - mapSection.Right);
             //float height = mapSection.Top < 0 ? Math.Abs(mapSection.Top) + mapSection.Bottom : Math.Abs(mapSection.Top - mapSection.Bottom); 
-            int mapRasterSize = (int)((float)Map.SectionSize / tileSize + 0.5f);
+            Size = (int)((float)Map.SectionSize / tileSize + 0.5f);
 
             int startX = (int)(mapSection.Left + 0.5f);
             int startY = (int)(mapSection.Top + 0.5f);
 
-            Tiles = new MapSectionRasterTile[mapRasterSize * mapRasterSize];
+            Tiles = new MapSectionRasterTile[Size * Size];
 
-            TopConnectingTiles = new MapSectionRasterConnectingTile[mapRasterSize];
-            RightConnectingTiles = new MapSectionRasterConnectingTile[mapRasterSize];
-            BottomConnectingTiles = new MapSectionRasterConnectingTile[mapRasterSize];
-            LeftConnectingTiles = new MapSectionRasterConnectingTile[mapRasterSize];
+            TopConnectingTiles = new MapSectionRasterConnectingTile[Size];
+            RightConnectingTiles = new MapSectionRasterConnectingTile[Size];
+            BottomConnectingTiles = new MapSectionRasterConnectingTile[Size];
+            LeftConnectingTiles = new MapSectionRasterConnectingTile[Size];
 
             MapUnit[] stillUnits = mapSection.StillUnits;
             for (int i = 0; i < Tiles.Length; i++)
             {
-                int xIndex = i % mapRasterSize, yIndex = i / mapRasterSize;
+                int xIndex = i % Size, yIndex = i / Size;
 
                 var tile = new MapSectionRasterTile();
                 tile.X = startX + tileSize * xIndex;
@@ -88,13 +89,13 @@ namespace YAFBCore.Mapping
                     LeftConnectingTiles[yIndex] = new MapSectionRasterConnectingTile(tile);
                 }
 
-                if (xIndex == (mapRasterSize - 1))
+                if (xIndex == (Size - 1))
                 {
                     tile.Status |= MapSectionRasterTileStatus.Connecting;
                     RightConnectingTiles[yIndex] = new MapSectionRasterConnectingTile(tile);
                 }
 
-                if (yIndex == (mapRasterSize - 1))
+                if (yIndex == (Size - 1))
                 {
                     tile.Status |= MapSectionRasterTileStatus.Connecting;
                     BottomConnectingTiles[xIndex] = new MapSectionRasterConnectingTile(tile);
