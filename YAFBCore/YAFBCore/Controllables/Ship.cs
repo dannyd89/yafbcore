@@ -134,9 +134,13 @@ namespace YAFBCore.Controllables
         /// </summary>
         private void reset()
         {
-            userMoveCommands.Clear();
+            lock (syncMoveCommands)
+                userMoveCommands.Clear();
+
             lastMoveCommand = null;
             pathfindingMoveCommands = null;
+
+            movement = Flattiverse.Vector.FromNull();
 
             resetWaiters();
         }

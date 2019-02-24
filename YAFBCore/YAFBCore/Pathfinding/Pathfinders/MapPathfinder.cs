@@ -234,7 +234,7 @@ namespace YAFBCore.Pathfinding.Pathfinders
                                 topTile.ParentX = currentTile.X;
                                 topTile.ParentY = currentTile.Y;
 
-                                priorityQueue.Enqueue(topTile, step + 2f * (Math.Abs(topTile.X - toTile.X) + Math.Abs(topTile.Y - toTile.Y)));
+                                priorityQueue.Enqueue(topTile, step /*+ 2f * (Math.Abs(topTile.X - toTile.X) + Math.Abs(topTile.Y - toTile.Y))*/);
                             }
                         }
 
@@ -252,7 +252,7 @@ namespace YAFBCore.Pathfinding.Pathfinders
                                 rightTile.ParentX = currentTile.X;
                                 rightTile.ParentY = currentTile.Y;
 
-                                priorityQueue.Enqueue(rightTile, step + 2f * (Math.Abs(rightTile.X - toTile.X) + Math.Abs(rightTile.Y - toTile.Y)));
+                                priorityQueue.Enqueue(rightTile, step /*+ 2f * (Math.Abs(rightTile.X - toTile.X) + Math.Abs(rightTile.Y - toTile.Y))*/);
                             }
                         }
 
@@ -270,7 +270,7 @@ namespace YAFBCore.Pathfinding.Pathfinders
                                 bottomTile.ParentX = currentTile.X;
                                 bottomTile.ParentY = currentTile.Y;
 
-                                priorityQueue.Enqueue(bottomTile, step + 2f * (Math.Abs(bottomTile.X - toTile.X) + Math.Abs(bottomTile.Y - toTile.Y)));
+                                priorityQueue.Enqueue(bottomTile, step /*+ 2f * (Math.Abs(bottomTile.X - toTile.X) + Math.Abs(bottomTile.Y - toTile.Y))*/);
                             }
                         }
 
@@ -288,7 +288,7 @@ namespace YAFBCore.Pathfinding.Pathfinders
                                 leftTile.ParentX = currentTile.X;
                                 leftTile.ParentY = currentTile.Y;
 
-                                priorityQueue.Enqueue(leftTile, step + 2f * (Math.Abs(leftTile.X - toTile.X) + Math.Abs(leftTile.Y - toTile.Y)));
+                                priorityQueue.Enqueue(leftTile, step /*+ 2f * (Math.Abs(leftTile.X - toTile.X) + Math.Abs(leftTile.Y - toTile.Y))*/);
                             }
                         }
 
