@@ -11,7 +11,7 @@ using YAFBCore.Utils;
 
 namespace YAFBCore.Pathfinding.Pathfinders
 {
-    public sealed class MapPathfinder : IDisposable
+    public sealed class MapPathfinder
     {
         /// <summary>
         /// Map this pathfinder is running on
@@ -29,6 +29,11 @@ namespace YAFBCore.Pathfinding.Pathfinders
         private MapSectionRaster[] rasters;
 
         /// <summary>
+        /// 
+        /// </summary>
+        public MapSectionRaster[] Rasters => rasters;
+
+        /// <summary>
         /// Current count of sections in 1 dimension
         /// </summary>
         private int currentSectionCount;
@@ -37,11 +42,6 @@ namespace YAFBCore.Pathfinding.Pathfinders
         /// 
         /// </summary>
         private Task<MapSectionRaster>[] tasks;
-
-        /// <summary>
-        /// Enables to wait for the update worker
-        /// </summary>
-        private ManualResetEvent updateResetEvent = new ManualResetEvent(false);
 
         /// <summary>
         /// 
@@ -62,33 +62,18 @@ namespace YAFBCore.Pathfinding.Pathfinders
             TileSize = tileSize;
             Map = map;
 
-            ThreadPool.QueueUserWorkItem(update, new object[] { mapSections, sectionCount });
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public void Dispose()
-        {
-            updateResetEvent.Dispose();
-
-            isDisposed = true;
+            init(mapSections, sectionCount);
         }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="arg"></param>
-        private void update(object arg)
+        private void init(MapSection[] mapSections, int sectionCount)
         {
             try
             {
                 //Stopwatch sw = Stopwatch.StartNew();
-
-                object[] args = (object[])arg;
-
-                MapSection[] mapSections = (MapSection[])args[0];
-                int sectionCount = (int)args[1];
                 
                 rasters = new MapSectionRaster[mapSections.Length];
                 tasks = new Task<MapSectionRaster>[mapSections.Length];
@@ -153,13 +138,11 @@ namespace YAFBCore.Pathfinding.Pathfinders
 
                 currentSectionCount = sectionCount;
 
-                updateResetEvent.Set();
-
                 //Console.WriteLine("Pathfinder update time: " + sw.Elapsed);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("MapPathfinder.update: ");
+                Console.WriteLine("MapPathfinder.init: ");
                 Console.WriteLine(ex.Message);
                 Console.WriteLine(ex.StackTrace);
             }
@@ -174,8 +157,6 @@ namespace YAFBCore.Pathfinding.Pathfinders
             try
             {
 #endif
-                updateResetEvent.WaitOne();
-
                 if (isDisposed)
                     return null;
 

@@ -105,7 +105,8 @@ namespace YAFBCore.Mapping
         /// <param name="mapUnit"></param>
         public void AddOrUpdate(MapUnit mapUnit)
         {
-            if (mapUnit.Mobility == Mobility.Still)
+            if (mapUnit.Mobility == Mobility.Still
+                && mapUnit.Kind != UnitKind.Explosion)
             {
                 if (!arrayContains(StillUnits, mapUnit, out _))
                     addInternal(ref StillUnits, ref stillCount, mapUnit);
@@ -140,10 +141,7 @@ namespace YAFBCore.Mapping
                     addInternal(ref PlayerUnits, ref playerCount, mapUnit);
                 else
                 {
-                    if (PlayerUnits[index].Kind == mapUnit.Kind)
-                        PlayerUnits[index].Update(mapUnit);
-                    else
-                        PlayerUnits[index] = mapUnit;
+                    PlayerUnits[index].Update(mapUnit);
                 }
             }
         }
@@ -155,7 +153,8 @@ namespace YAFBCore.Mapping
         internal bool Remove(MapUnit mapUnit)
         {
             MapSectionSortType sortType = MapSectionSortType.None;
-            if (mapUnit.Mobility == Mobility.Still)
+            if (mapUnit.Mobility == Mobility.Still 
+                && mapUnit.Kind != UnitKind.Explosion)
             {
                 int index;
                 if (arrayContains(StillUnits, mapUnit, out index))
@@ -211,6 +210,18 @@ namespace YAFBCore.Mapping
             if ((sortValue & 0x0001) == 0x0001)
             {
                 Array.Sort(StillUnits, 0, stillCount, RadiusComparer.Default);
+
+                for (int i = 0; i < StillUnits.Length; i++)
+                {
+                    //if (i == 0)
+                    //    Debug.Assert(AgingUnits[i] != null);
+
+                    if (StillUnits[i] == null)
+                    {
+                        stillCount = i;
+                        break;
+                    }
+                }
             }
 
             if ((sortValue & 0x0010) == 0x0010)

@@ -33,7 +33,7 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// Defines the width and height of a section
         /// </summary>
-        internal const int SectionSize = 1024;
+        internal const int SectionSize = 4096;
 
         /// <summary>
         /// The universe this map belongs to
@@ -191,7 +191,7 @@ namespace YAFBCore.Mapping
 
                     map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal.X, mapUnit.PositionInternal.Y)].AddOrUpdate(mapUnit);
 
-                    if (mapUnit.Mobility == Mobility.Still)
+                    if (mapUnit.Mobility == Mobility.Still && mapUnit.Kind != UnitKind.Explosion)
                         map.stillUnits.Add(mapUnit.Name, mapUnit);
                 }
 
@@ -294,7 +294,8 @@ namespace YAFBCore.Mapping
                     if (tempStillUnits[i] == null)
                         break;
 
-                    if (!stillUnits.TryGetValue(tempStillUnits[i].Name, out mapUnit))
+                    if (tempStillUnits[i].Kind != UnitKind.Explosion 
+                        && !stillUnits.TryGetValue(tempStillUnits[i].Name, out mapUnit))
                         stillUnits.Add(tempStillUnits[i].Name, tempStillUnits[i]);
                 }
 
@@ -349,7 +350,7 @@ namespace YAFBCore.Mapping
                         {
                             mapSection.AgingUnits[x] = null;
 
-                            if (mapUnit is PlayerShipMapUnit)
+                            if (mapUnit.Kind == UnitKind.PlayerShip)
                                 for(int p = 0; p < mapSection.PlayerCount; p++)
                                 {
                                     Debug.Assert(mapSection.PlayerUnits[p] != null);
@@ -357,10 +358,18 @@ namespace YAFBCore.Mapping
                                     if (mapSection.PlayerUnits[p].Name == mapUnit.Name)
                                         mapSection.PlayerUnits[p] = null;
                                 }
+                            else if (mapUnit.Kind == UnitKind.Explosion)
+                                for (int s = 0; s < mapSection.StillCount; s++)
+                                {
+                                    Debug.Assert(mapSection.StillUnits[s] != null);
+
+                                    if (mapSection.StillUnits[s].Name == mapUnit.Name)
+                                        mapSection.StillUnits[s] = null;
+                                }
                         }
                     }
 
-                    mapSection.Sort(MapSectionSortType.AgingUnits | MapSectionSortType.PlayerUnits);
+                    mapSection.Sort(MapSectionSortType.StillUnits | MapSectionSortType.AgingUnits | MapSectionSortType.PlayerUnits);
 
                     isUpdated = true;
                 }

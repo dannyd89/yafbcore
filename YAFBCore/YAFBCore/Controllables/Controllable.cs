@@ -125,7 +125,7 @@ namespace YAFBCore.Controllables
         /// <summary>
         /// 
         /// </summary>
-        protected virtual void move(MapPathfinder mapPathfinder) { }
+        protected virtual void move() { }
 
         /// <summary>
         /// 

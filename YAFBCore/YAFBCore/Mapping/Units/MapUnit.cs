@@ -36,7 +36,6 @@ namespace YAFBCore.Mapping.Units
         internal Vector OrbitingCenter;
         protected List<UnitOrbitingState> orbitingList;
 
-
         #region Properties
         /// <summary>
         /// Tells if the unit is aging over time
@@ -113,7 +112,7 @@ namespace YAFBCore.Mapping.Units
             gravity = unit.Gravity;
 
             PositionInternal = unit.Position;
-            MovementInternal = unit.Movement - movementOffset;
+            MovementInternal = unit.Movement + movementOffset;
             
             if (isOrbiting)
             {

@@ -12,5 +12,16 @@ namespace YAFBCore.Mapping.Units
 		{
 			this.shot = shot;
 		}
-	}
+
+        public override bool IsAging => true;
+
+        public override int AgeMax => 5;
+
+        internal override bool Age()
+        {
+            PositionInternal += MovementInternal;
+
+            return base.Age();
+        }
+    }
 }

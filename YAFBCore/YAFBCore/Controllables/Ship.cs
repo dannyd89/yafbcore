@@ -75,6 +75,11 @@ namespace YAFBCore.Controllables
         /// <summary>
         /// 
         /// </summary>
+        public MapPathfinder MapPathfinder;
+
+        /// <summary>
+        /// 
+        /// </summary>
         public LinkedList<MoveCommand> pathfindingMoveCommands;
 
         /// <summary>
@@ -90,6 +95,16 @@ namespace YAFBCore.Controllables
         /// Waiter which can be used to know if this ship has successfully performed its shots
         /// </summary>
         internal ManualResetEventSlim ShootWaiter = new ManualResetEventSlim(false);
+
+        /// <summary>
+        /// Sync object to lock userShootCommands queue
+        /// </summary>
+        private object syncShootCommands = new object();
+
+        /// <summary>
+        /// Stores the issued move commands
+        /// </summary>
+        private Queue<ShootCommand> userShootCommands = new Queue<ShootCommand>();
         #endregion
 
         #region Properties
@@ -134,13 +149,15 @@ namespace YAFBCore.Controllables
         /// </summary>
         private void reset()
         {
-            lock (syncMoveCommands)
-                userMoveCommands.Clear();
+            //lock (syncMoveCommands)
+            //    userMoveCommands.Clear();
 
+            //scanReference = null;
+            //currentMap = null;
             lastMoveCommand = null;
-            pathfindingMoveCommands = null;
+            //pathfindingMoveCommands = null;
 
-            movement = Flattiverse.Vector.FromNull();
+            //movement = Flattiverse.Vector.FromNull();
 
             resetWaiters();
         }
@@ -164,14 +181,18 @@ namespace YAFBCore.Controllables
 
             while (!isDisposed)
             {
-                MapPathfinder mapPathfinder = null;
                 try
                 {
                     // Wait for the game to calculate the next tick
                     flowControl.FlowControl.PreWait();
 
+                    if (!ship.IsAlive)
+                        TryContinue();
+
                     // Scan and wait
                     scan();
+
+                    Console.WriteLine("Scan done...");
 
                     // Let the map manager process all the scanned info
                     Session.MapManager.WaitMerge();
@@ -184,8 +205,6 @@ namespace YAFBCore.Controllables
                     //Pathfinding.AStarPathing.AStarPathfinder pathFinder = task.Result;
                     //currentMap.EndLock();
 
-                    // TODO: Wäre vielleicht besser das direkt in der move Funktion zu machen, dass nicht immer ein neuer Pathfinder erzeugt wird
-                    mapPathfinder = currentMap.GetPathFinder(NeededTileSize);
 
                     //Console.WriteLine("Rasterizing time: " + sw.Elapsed);
 
@@ -193,7 +212,7 @@ namespace YAFBCore.Controllables
                     shoot();
 
                     // Perform any move command if available
-                    move(mapPathfinder);
+                    move();
 
                     // Commit actions queued by this tick
                     flowControl.FlowControl.Commit();
@@ -208,11 +227,6 @@ namespace YAFBCore.Controllables
 
                     Debug.WriteLine($"{ship.Name}: Worker Exception");
                     Debug.WriteLine(ex.Message);
-                }
-                finally
-                {
-                    if (mapPathfinder != null)
-                        mapPathfinder.Dispose();
                 }
             }
         }
@@ -285,7 +299,7 @@ namespace YAFBCore.Controllables
         /// <summary>
         /// 
         /// </summary>
-        protected override void move(MapPathfinder mapPathfinder)
+        protected override void move()
         {
             try
             {
@@ -298,9 +312,11 @@ namespace YAFBCore.Controllables
                     {
                         lastMoveCommand = userMoveCommands.Dequeue();
 
-                        pathfindingMoveCommands = mapPathfinder.Pathfind(playerShipMapUnit.Position, lastMoveCommand.Position);
+                        // TODO: Wäre vielleicht besser das direkt in der move Funktion zu machen, dass nicht immer ein neuer Pathfinder erzeugt wird
+                        //MapPathfinder = currentMap.GetPathFinder(NeededTileSize);
+                        //pathfindingMoveCommands = MapPathfinder.Pathfind(playerShipMapUnit.Position, lastMoveCommand.Position);
 
-                        lastMoveCommand = null;
+                        //lastMoveCommand = null;
                     }
 
                     if ((lastMoveCommand == null || lastMoveCommand.Reached) && pathfindingMoveCommands != null && pathfindingMoveCommands.Count > 0)
@@ -351,7 +367,29 @@ namespace YAFBCore.Controllables
         {
             try
             {
+                lock (syncShootCommands)
+                {
+                    if (userShootCommands.Count > 0)
+                        for (int i = 0; i < ship.WeaponProductionStatus && userShootCommands.Count > 0; i++)
+                        {
+                            ShootCommand shootCommand = userShootCommands.Dequeue();
+                            shootCommand.TempSetup(ship, playerShipMapUnit);
 
+                            ship.Shoot(shootCommand.Direction,
+                                   shootCommand.Direction.Angle,
+                                   shootCommand.Time,
+                                   shootCommand.Load,
+                                   shootCommand.DamageHull,
+                                   shootCommand.DamageShield,
+                                   shootCommand.DamageEnergy,
+                                   shootCommand.SubDirections);
+                        }
+
+                    //if (shootCommand != null)
+                    //{
+
+                    //}
+                }
             }
             catch (Exception ex)
             {
@@ -432,6 +470,10 @@ namespace YAFBCore.Controllables
                 case MoveCommand moveCommand:
                     lock (syncMoveCommands)
                         userMoveCommands.Enqueue(moveCommand);
+                    break;
+                case ShootCommand shootCommand:
+                    lock (syncShootCommands)
+                        userShootCommands.Enqueue(shootCommand);
                     break;
                 default:
                     throw new NotSupportedException();

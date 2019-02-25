@@ -13,8 +13,13 @@ namespace YAFBCore.Mapping.Units
 			this.explosion = explosion;
 		}
 
-        public override int AgeMax => 10;
+        public override int AgeMax => 20;
 
         public override bool IsAging => true;
+
+        internal override bool Age()
+        {
+            return base.Age();
+        }
     }
 }

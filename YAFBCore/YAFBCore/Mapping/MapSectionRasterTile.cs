@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace YAFBCore.Mapping
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    internal sealed class MapSectionRasterTile
+    public sealed class MapSectionRasterTile
     {
         /// <summary>
         /// Status of this tile

@@ -5,8 +5,14 @@ namespace YAFBCore.Mapping.Units
 {
 	public class PlayerShipMapUnit : MapUnit
 	{
+        /// <summary>
+        /// 
+        /// </summary>
 		private PlayerShip playerShip;
 
+        /// <summary>
+        /// 
+        /// </summary>
         private Controllable controllable;
 	
         /// <summary>
@@ -46,7 +52,7 @@ namespace YAFBCore.Mapping.Units
         /// <summary>
         /// 
         /// </summary>
-        public bool IsOwnShip => controllable != null;
+        public override int AgeMax => controllable != null ? 1 : 10;
 
         /// <summary>
         /// 
@@ -56,7 +62,17 @@ namespace YAFBCore.Mapping.Units
         /// <summary>
         /// 
         /// </summary>
-        public override int AgeMax => controllable != null ? -1 : 100;
+        public bool IsOwnShip => controllable != null;
+
+        /// <summary>
+        /// Current energy in percentage
+        /// </summary>
+        public float Energy => controllable != null ? controllable.Energy / controllable.EnergyMax : 0f;
+
+        /// <summary>
+        /// Max Energy
+        /// </summary>
+        public float EnergyMax => controllable != null ? controllable.EnergyMax : 0f;
 
         /// <summary>
         /// 
@@ -65,7 +81,7 @@ namespace YAFBCore.Mapping.Units
         internal override bool Age()
         {
             if (!IsOwnShip)
-                PositionInternal = PositionInternal + MovementInternal;
+                PositionInternal += MovementInternal;
 
             return base.Age();
         }

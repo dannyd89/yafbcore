@@ -106,6 +106,15 @@ namespace YAFBCore.Messaging
         {
             Connection = connection;
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="universeGroup"></param>
+        internal void ChangeUniverseGroup(UniverseGroup universeGroup)
+        {
+
+        }
         
         /// <summary>
         /// Adds a listener for specific messages sent by the flattiverse server

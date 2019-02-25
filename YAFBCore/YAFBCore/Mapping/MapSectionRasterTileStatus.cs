@@ -4,7 +4,7 @@ using System.Text;
 
 namespace YAFBCore.Mapping
 {
-    internal enum MapSectionRasterTileStatus : byte
+    public enum MapSectionRasterTileStatus : byte
     {
         Free = 0b0000_0000, // Tile is free to traverse
         Checked = 0b0000_0001, // Tile was checked by path finder

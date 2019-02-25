@@ -12,10 +12,10 @@ using YAFBCore.Utils.Mathematics;
 
 namespace YAFBCore.Mapping
 {
-    internal sealed class MapSectionRaster
+    public sealed class MapSectionRaster
     {
         internal readonly MapSection MapSection;
-        internal readonly MapSectionRasterTile[] Tiles;
+        public readonly MapSectionRasterTile[] Tiles;
 
         internal readonly MapSectionRasterConnectingTile[] TopConnectingTiles;
         internal readonly MapSectionRasterConnectingTile[] RightConnectingTiles;
@@ -23,14 +23,14 @@ namespace YAFBCore.Mapping
         internal readonly MapSectionRasterConnectingTile[] LeftConnectingTiles;
 
         internal readonly int Size;
-        internal readonly int TileSize;
+        public readonly int TileSize;
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="mapSection"></param>
         /// <param name="tileSize"></param>
-        public MapSectionRaster(MapSection mapSection, int tileSize)
+        internal MapSectionRaster(MapSection mapSection, int tileSize)
         {
             MapSection = mapSection;
             TileSize = tileSize;
@@ -118,8 +118,8 @@ namespace YAFBCore.Mapping
         {
             // Find the closest point to the circle within the rectangle
             // Calculate the distance between the circle's center and this closest point
-            float distanceX = position.X - MathUtil.Clamp(position.X, tile.X, tile.X + tileSize);
-            float distanceY = position.Y - MathUtil.Clamp(position.Y, tile.Y, tile.Y + tileSize);
+            float distanceX = position.X - MathUtil.Clamp(position.X, tile.X - tileSize / 2f, tile.X + tileSize / 2f);
+            float distanceY = position.Y - MathUtil.Clamp(position.Y, tile.Y - tileSize / 2f, tile.Y + tileSize / 2f);
 
             // If the distance is less than the circle's radius, an intersection occurs
             return (distanceX * distanceX) + (distanceY * distanceY) < (radius * radius);
