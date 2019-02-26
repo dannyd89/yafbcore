@@ -76,19 +76,13 @@ namespace YAFBCore.Networking
         /// <summary>
         /// Returns the current session
         /// </summary>
-        public UniverseSession Session
-        {
-            get { return session; }
-        }
+        public UniverseSession Session => session;
         #endregion
 
         #region MessageManager
         private MessageManager messageManager;
 
-        public MessageManager MessageManager
-        {
-            get { return messageManager; }
-        }
+        public MessageManager MessageManager => messageManager;
         #endregion
 
         /// <summary>
@@ -151,6 +145,7 @@ namespace YAFBCore.Networking
             if (session != null)
                 throw new InvalidOperationException("Close the current session first before joining a new one");
 
+            messageManager.UniverseGroup = universeGroup;
             session = new UniverseSession(this, universeGroup, name, team);
 
             return session;
@@ -164,6 +159,7 @@ namespace YAFBCore.Networking
             if (session == null)
                 throw new InvalidOperationException("There is no session currently joined which can be left");
 
+            messageManager.Dispose();
             session.Dispose();
             session = null;
         }

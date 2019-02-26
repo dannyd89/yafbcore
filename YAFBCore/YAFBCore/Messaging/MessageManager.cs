@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace YAFBCore.Messaging
 {
@@ -52,12 +53,46 @@ namespace YAFBCore.Messaging
     public delegate void UniverseGroupResetPendingMessageEventHandler(object sender, UniverseGroupResetPendingMessage msg);
     #endregion
 
-    public class MessageManager
+    public class MessageManager : IDisposable
     {
         internal readonly Connection Connection;
 
+        private Task messageTask;
+        private CancellationTokenSource cancellationTokenSource;
+
+        private UniverseGroup universeGroup;
+
+        /// <summary>
+        /// On setting the universe group an own thread will be started to read messages
+        /// Thus setting it needs to terminate an already running task
+        /// </summary>
+        public UniverseGroup UniverseGroup
+        {
+            get { return universeGroup; }
+            set
+            {
+                if (messageTask != null && messageTask.Status != TaskStatus.RanToCompletion)
+                {
+                    cancellationTokenSource.Cancel();
+
+                    Task.WaitAny(messageTask);
+
+                    cancellationTokenSource.Dispose();
+                    cancellationTokenSource = null;
+                }
+
+                universeGroup = value;
+
+                if (universeGroup != null)
+                {
+                    cancellationTokenSource = new CancellationTokenSource();
+                    messageTask = Task.Factory.StartNew(() => readMessages(), cancellationTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                }
+            }
+        }
+
         #region Events
-        
+
         public event BinaryChatMessageEventHandler BinaryChatMessageReceived;
         public event BroadCastChatMessageEventHandler BroadCastChatMessageReceived;
         public event ChatMessageEventHandler ChatMessageReceived;
@@ -106,21 +141,12 @@ namespace YAFBCore.Messaging
         {
             Connection = connection;
         }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="universeGroup"></param>
-        internal void ChangeUniverseGroup(UniverseGroup universeGroup)
-        {
-
-        }
         
         /// <summary>
         /// Adds a listener for specific messages sent by the flattiverse server
         /// </summary>
         /// <param name="listener"></param>
-        internal void AddListener(object listener)
+        public void AddListener(object listener)
         {
             IBinaryChatMessageListener binaryChatMessageListener = listener as IBinaryChatMessageListener;
             if (binaryChatMessageListener != null)
@@ -272,92 +298,284 @@ namespace YAFBCore.Messaging
 
         }
 
+
+        /// <summary>
+        /// Adds a listener for specific messages sent by the flattiverse server
+        /// </summary>
+        /// <param name="listener"></param>
+        public void RemoveListener(object listener)
+        {
+            IBinaryChatMessageListener binaryChatMessageListener = listener as IBinaryChatMessageListener;
+            if (binaryChatMessageListener != null)
+                BinaryChatMessageReceived -= binaryChatMessageListener.OnBinaryChatMessage;
+
+            IBroadCastChatMessageListener broadCastChatMessageListener = listener as IBroadCastChatMessageListener;
+            if (broadCastChatMessageListener != null)
+                BroadCastChatMessageReceived -= broadCastChatMessageListener.OnBroadCastChatMessage;
+
+            IChatMessageListener chatMessageListener = listener as IChatMessageListener;
+            if (chatMessageListener != null)
+                ChatMessageReceived -= chatMessageListener.OnChatMessage;
+
+            IGateSwitchedMessageListener gateSwitchedMessageListener = listener as IGateSwitchedMessageListener;
+            if (gateSwitchedMessageListener != null)
+                GateSwitchedMessageReceived -= gateSwitchedMessageListener.OnGateSwitchedMessage;
+
+            IPlayerKickedFromUniverseGroupMessageListener playerKickedFromUniverseGroupMessageListener = listener as IPlayerKickedFromUniverseGroupMessageListener;
+            if (playerKickedFromUniverseGroupMessageListener != null)
+                PlayerKickedFromUniverseGroupMessageReceived -= playerKickedFromUniverseGroupMessageListener.OnPlayerKickedFromUniverseGroupMessage;
+
+            IPlayerUnitBuildCanceledMessageListener playerUnitBuildCanceledMessageListener = listener as IPlayerUnitBuildCanceledMessageListener;
+            if (playerUnitBuildCanceledMessageListener != null)
+                PlayerUnitBuildCanceledMessageReceived -= playerUnitBuildCanceledMessageListener.OnPlayerUnitBuildCanceledMessage;
+
+            IPlayerUnitBuildFinishedMessageListener playerUnitBuildFinishedMessageListener = listener as IPlayerUnitBuildFinishedMessageListener;
+            if (playerUnitBuildFinishedMessageListener != null)
+                PlayerUnitBuildFinishedMessageReceived -= playerUnitBuildFinishedMessageListener.OnPlayerUnitBuildFinishedMessage;
+
+            IPlayerUnitBuildMessageListener playerUnitBuildMessageListener = listener as IPlayerUnitBuildMessageListener;
+            if (playerUnitBuildMessageListener != null)
+                PlayerUnitBuildMessageReceived -= playerUnitBuildMessageListener.OnPlayerUnitBuildMessage;
+
+            IGameMessageListener gameMessageListener = listener as IGameMessageListener;
+            if (gameMessageListener != null)
+                GameMessageReceived -= gameMessageListener.OnGameMessage;
+
+            IMissionTargetAvailableMessageListener missionTargetAvailableMessageListener = listener as IMissionTargetAvailableMessageListener;
+            if (missionTargetAvailableMessageListener != null)
+                MissionTargetAvailableMessageReceived -= missionTargetAvailableMessageListener.OnMissionTargetAvailableMessage;
+
+            IMOTDMessageListener mOTDMessageListener = listener as IMOTDMessageListener;
+            if (mOTDMessageListener != null)
+                MOTDMessageReceived -= mOTDMessageListener.OnMOTDMessage;
+
+            IPlayerDroppedFromUniverseGroupMessageListener playerDroppedFromUniverseGroupMessageListener = listener as IPlayerDroppedFromUniverseGroupMessageListener;
+            if (playerDroppedFromUniverseGroupMessageListener != null)
+                PlayerDroppedFromUniverseGroupMessageReceived -= playerDroppedFromUniverseGroupMessageListener.OnPlayerDroppedFromUniverseGroupMessage;
+
+            IPlayerJoinedUniverseGroupMessageListener playerJoinedUniverseGroupMessageListener = listener as IPlayerJoinedUniverseGroupMessageListener;
+            if (playerJoinedUniverseGroupMessageListener != null)
+                PlayerJoinedUniverseGroupMessageReceived -= playerJoinedUniverseGroupMessageListener.OnPlayerJoinedUniverseGroupMessage;
+
+            IPlayerPartedUniverseGroupMessageListener playerPartedUniverseGroupMessageListener = listener as IPlayerPartedUniverseGroupMessageListener;
+            if (playerPartedUniverseGroupMessageListener != null)
+                PlayerPartedUniverseGroupMessageReceived -= playerPartedUniverseGroupMessageListener.OnPlayerPartedUniverseGroupMessage;
+
+            IPlayerUnitBuildStartMessageListener playerUnitBuildStartMessageListener = listener as IPlayerUnitBuildStartMessageListener;
+            if (playerUnitBuildStartMessageListener != null)
+                PlayerUnitBuildStartMessageReceived -= playerUnitBuildStartMessageListener.OnPlayerUnitBuildStartMessage;
+
+            IPlayerUnitCollidedWithPlayerUnitMessageListener playerUnitCollidedWithPlayerUnitMessageListener = listener as IPlayerUnitCollidedWithPlayerUnitMessageListener;
+            if (playerUnitCollidedWithPlayerUnitMessageListener != null)
+                PlayerUnitCollidedWithPlayerUnitMessageReceived -= playerUnitCollidedWithPlayerUnitMessageListener.OnPlayerUnitCollidedWithPlayerUnitMessage;
+
+            IPlayerUnitCollidedWithUnitMessageListener playerUnitCollidedWithUnitMessageListener = listener as IPlayerUnitCollidedWithUnitMessageListener;
+            if (playerUnitCollidedWithUnitMessageListener != null)
+                PlayerUnitCollidedWithUnitMessageReceived -= playerUnitCollidedWithUnitMessageListener.OnPlayerUnitCollidedWithUnitMessage;
+
+            IPlayerUnitCommittedSuicideMessageListener playerUnitCommittedSuicideMessageListener = listener as IPlayerUnitCommittedSuicideMessageListener;
+            if (playerUnitCommittedSuicideMessageListener != null)
+                PlayerUnitCommittedSuicideMessageReceived -= playerUnitCommittedSuicideMessageListener.OnPlayerUnitCommittedSuicideMessage;
+
+            IPlayerUnitContinuedMessageListener playerUnitContinuedMessageListener = listener as IPlayerUnitContinuedMessageListener;
+            if (playerUnitContinuedMessageListener != null)
+                PlayerUnitContinuedMessageReceived -= playerUnitContinuedMessageListener.OnPlayerUnitContinuedMessage;
+
+            IPlayerUnitDeceasedByBadHullRefreshingPowerUpMessageListener playerUnitDeceasedByBadHullRefreshingPowerUpMessageListener = listener as IPlayerUnitDeceasedByBadHullRefreshingPowerUpMessageListener;
+            if (playerUnitDeceasedByBadHullRefreshingPowerUpMessageListener != null)
+                PlayerUnitDeceasedByBadHullRefreshingPowerUpMessageReceived -= playerUnitDeceasedByBadHullRefreshingPowerUpMessageListener.OnPlayerUnitDeceasedByBadHullRefreshingPowerUpMessage;
+
+            IPlayerUnitDeceasedMessageListener playerUnitDeceasedMessageListener = listener as IPlayerUnitDeceasedMessageListener;
+            if (playerUnitDeceasedMessageListener != null)
+                PlayerUnitDeceasedMessageReceived -= playerUnitDeceasedMessageListener.OnPlayerUnitDeceasedMessage;
+
+            IPlayerUnitHitEnemyTargetMessageListener playerUnitHitEnemyTargetMessageListener = listener as IPlayerUnitHitEnemyTargetMessageListener;
+            if (playerUnitHitEnemyTargetMessageListener != null)
+                PlayerUnitHitEnemyTargetMessageReceived -= playerUnitHitEnemyTargetMessageListener.OnPlayerUnitHitEnemyTargetMessage;
+
+            IPlayerUnitHitMissionTargetMessageListener playerUnitHitMissionTargetMessageListener = listener as IPlayerUnitHitMissionTargetMessageListener;
+            if (playerUnitHitMissionTargetMessageListener != null)
+                PlayerUnitHitMissionTargetMessageReceived -= playerUnitHitMissionTargetMessageListener.OnPlayerUnitHitMissionTargetMessage;
+
+            IPlayerUnitHitOwnTargetMessageListener playerUnitHitOwnTargetMessageListener = listener as IPlayerUnitHitOwnTargetMessageListener;
+            if (playerUnitHitOwnTargetMessageListener != null)
+                PlayerUnitHitOwnTargetMessageReceived -= playerUnitHitOwnTargetMessageListener.OnPlayerUnitHitOwnTargetMessage;
+
+            IPlayerUnitJumpedMessageListener playerUnitJumpedMessageListener = listener as IPlayerUnitJumpedMessageListener;
+            if (playerUnitJumpedMessageListener != null)
+                PlayerUnitJumpedMessageReceived -= playerUnitJumpedMessageListener.OnPlayerUnitJumpedMessage;
+
+            IPlayerUnitLoggedOffMessageListener playerUnitLoggedOffMessageListener = listener as IPlayerUnitLoggedOffMessageListener;
+            if (playerUnitLoggedOffMessageListener != null)
+                PlayerUnitLoggedOffMessageReceived -= playerUnitLoggedOffMessageListener.OnPlayerUnitLoggedOffMessage;
+
+            IPlayerUnitShotByPlayerUnitMessageListener playerUnitShotByPlayerUnitMessageListener = listener as IPlayerUnitShotByPlayerUnitMessageListener;
+            if (playerUnitShotByPlayerUnitMessageListener != null)
+                PlayerUnitShotByPlayerUnitMessageReceived -= playerUnitShotByPlayerUnitMessageListener.OnPlayerUnitShotByPlayerUnitMessage;
+
+            IPlayerUnitShotByUnitMessageListener playerUnitShotByUnitMessageListener = listener as IPlayerUnitShotByUnitMessageListener;
+            if (playerUnitShotByUnitMessageListener != null)
+                PlayerUnitShotByUnitMessageReceived -= playerUnitShotByUnitMessageListener.OnPlayerUnitShotByUnitMessage;
+
+            ISystemMessageListener systemMessageListener = listener as ISystemMessageListener;
+            if (systemMessageListener != null)
+                SystemMessageReceived -= systemMessageListener.OnSystemMessage;
+
+            ITargetDedominationStartedMessageListener targetDedominationStartedMessageListener = listener as ITargetDedominationStartedMessageListener;
+            if (targetDedominationStartedMessageListener != null)
+                TargetDeDominationStartedMessageReceived -= targetDedominationStartedMessageListener.OnTargetDedominationStartedMessage;
+
+            ITargetDominationFinishedMessageListener targetDominationFinishedMessageListener = listener as ITargetDominationFinishedMessageListener;
+            if (targetDominationFinishedMessageListener != null)
+                TargetDominationFinishedMessageReceived -= targetDominationFinishedMessageListener.OnTargetDominationFinishedMessage;
+
+            ITargetDominationScoredMessageListener targetDominationScoredMessageListener = listener as ITargetDominationScoredMessageListener;
+            if (targetDominationScoredMessageListener != null)
+                TargetDominationScoredMessageReceived -= targetDominationScoredMessageListener.OnTargetDominationScoredMessage;
+
+            ITargetDominationStartedMessageListener targetDominationStartedMessageListener = listener as ITargetDominationStartedMessageListener;
+            if (targetDominationStartedMessageListener != null)
+                TargetDominationStartedMessageReceived -= targetDominationStartedMessageListener.OnTargetDominationStartedMessage;
+
+            ITeamCastChatMessageListener teamCastChatMessageListener = listener as ITeamCastChatMessageListener;
+            if (teamCastChatMessageListener != null)
+                TeamCastChatMessageReceived -= teamCastChatMessageListener.OnTeamCastChatMessage;
+
+            IUniCastChatMessageListener uniCastChatMessageListener = listener as IUniCastChatMessageListener;
+            if (uniCastChatMessageListener != null)
+                UniCastChatMessageReceived -= uniCastChatMessageListener.OnUniCastChatMessage;
+
+            IUniverseGroupResetMessageListener universeGroupResetMessageListener = listener as IUniverseGroupResetMessageListener;
+            if (universeGroupResetMessageListener != null)
+                UniverseGroupResetMessageReceived -= universeGroupResetMessageListener.OnUniverseGroupResetMessage;
+
+            IUniverseGroupResetPendingMessageListener universeGroupResetPendingMessageListener = listener as IUniverseGroupResetPendingMessageListener;
+            if (universeGroupResetPendingMessageListener != null)
+                UniverseGroupResetPendingMessageReceived -= universeGroupResetPendingMessageListener.OnUniverseGroupResetPendingMessage;
+        }
+
         /// <summary>
         /// Handles incoming messages
         /// </summary>
-        public void ReadMessages()
+        private void readMessages()
         {
-            FlattiverseMessage message;
-
-            while (Connection.Connector.NextMessage(out message))
+            try
             {
-                if (message is BinaryChatMessage)
-                    RaiseOnMessage((BinaryChatMessage)message);
-                else if (message is BroadCastChatMessage)
-                    RaiseOnMessage((BroadCastChatMessage)message);
-                else if (message is ChatMessage)
-                    RaiseOnMessage((ChatMessage)message);
-                else if (message is GameMessage)
-                    RaiseOnMessage((GameMessage)message);
-                else if (message is GateSwitchedMessage)
-                    RaiseOnMessage((GateSwitchedMessage)message);
-                else if (message is MissionTargetAvailableMessage)
-                    RaiseOnMessage((MissionTargetAvailableMessage)message);
-                else if (message is MOTDMessage)
-                    RaiseOnMessage((MOTDMessage)message);
-                else if (message is PlayerDroppedFromUniverseGroupMessage)
-                    RaiseOnMessage((PlayerDroppedFromUniverseGroupMessage)message);
-                else if (message is PlayerJoinedUniverseGroupMessage)
-                    RaiseOnMessage((PlayerJoinedUniverseGroupMessage)message);
-                else if (message is PlayerKickedFromUniverseGroupMessage)
-                    RaiseOnMessage((PlayerKickedFromUniverseGroupMessage)message);
-                else if (message is PlayerPartedUniverseGroupMessage)
-                    RaiseOnMessage((PlayerPartedUniverseGroupMessage)message);
-                else if (message is PlayerUnitBuildCanceledMessage)
-                    RaiseOnMessage((PlayerUnitBuildCanceledMessage)message);
-                else if (message is PlayerUnitBuildFinishedMessage)
-                    RaiseOnMessage((PlayerUnitBuildFinishedMessage)message);
-                else if (message is PlayerUnitBuildMessage)
-                    RaiseOnMessage((PlayerUnitBuildMessage)message);
-                else if (message is PlayerUnitBuildStartMessage)
-                    RaiseOnMessage((PlayerUnitBuildStartMessage)message);
-                else if (message is PlayerUnitCollidedWithPlayerUnitMessage)
-                    RaiseOnMessage((PlayerUnitCollidedWithPlayerUnitMessage)message);
-                else if (message is PlayerUnitCollidedWithUnitMessage)
-                    RaiseOnMessage((PlayerUnitCollidedWithUnitMessage)message);
-                else if (message is PlayerUnitCommittedSuicideMessage)
-                    RaiseOnMessage((PlayerUnitCommittedSuicideMessage)message);
-                else if (message is PlayerUnitContinuedMessage)
-                    RaiseOnMessage((PlayerUnitContinuedMessage)message);
-                else if (message is PlayerUnitDeceasedByBadHullRefreshingPowerUpMessage)
-                    RaiseOnMessage((PlayerUnitDeceasedByBadHullRefreshingPowerUpMessage)message);
-                else if (message is PlayerUnitDeceasedMessage)
-                    RaiseOnMessage((PlayerUnitDeceasedMessage)message);
-                else if (message is PlayerUnitHitEnemyTargetMessage)
-                    RaiseOnMessage((PlayerUnitHitEnemyTargetMessage)message);
-                else if (message is PlayerUnitHitMissionTargetMessage)
-                    RaiseOnMessage((PlayerUnitHitMissionTargetMessage)message);
-                else if (message is PlayerUnitHitOwnTargetMessage)
-                    RaiseOnMessage((PlayerUnitHitOwnTargetMessage)message);
-                else if (message is PlayerUnitJumpedMessage)
-                    RaiseOnMessage((PlayerUnitJumpedMessage)message);
-                else if (message is PlayerUnitLoggedOffMessage)
-                    RaiseOnMessage((PlayerUnitLoggedOffMessage)message);
-                else if (message is PlayerUnitShotByPlayerUnitMessage)
-                    RaiseOnMessage((PlayerUnitShotByPlayerUnitMessage)message);
-                else if (message is PlayerUnitShotByUnitMessage)
-                    RaiseOnMessage((PlayerUnitShotByUnitMessage)message);
-                else if (message is SystemMessage)
-                    RaiseOnMessage((SystemMessage)message);
-                else if (message is TargetDedominationStartedMessage)
-                    RaiseOnMessage((TargetDedominationStartedMessage)message);
-                else if (message is TargetDominationFinishedMessage)
-                    RaiseOnMessage((TargetDominationFinishedMessage)message);
-                else if (message is TargetDominationScoredMessage)
-                    RaiseOnMessage((TargetDominationScoredMessage)message);
-                else if (message is TargetDominationStartedMessage)
-                    RaiseOnMessage((TargetDominationStartedMessage)message);
-                else if (message is TeamCastChatMessage)
-                    RaiseOnMessage((TeamCastChatMessage)message);
-                else if (message is UniCastChatMessage)
-                    RaiseOnMessage((UniCastChatMessage)message);
-                else if (message is UniverseGroupResetMessage)
-                    RaiseOnMessage((UniverseGroupResetMessage)message);
-                else if (message is UniverseGroupResetPendingMessage)
-                    RaiseOnMessage((UniverseGroupResetPendingMessage)message);
-                else
-                    RaiseOnMessage(message.GetType().Name);
+                using (UniverseGroupFlowControl flowControl = universeGroup.GetNewFlowControl())
+                    while (!cancellationTokenSource.IsCancellationRequested)
+                    {
+                        flowControl.PreWait();
+
+                        FlattiverseMessage message;
+                        while (Connection.Connector.NextMessage(out message))
+                        {
+                            if (cancellationTokenSource.IsCancellationRequested)
+                                return;
+
+                            if (message is ChatMessage)
+                            {
+                                RaiseOnMessage((ChatMessage)message);
+                                if (message is BinaryChatMessage)
+                                    RaiseOnMessage((BinaryChatMessage)message);
+                                else if (message is BroadCastChatMessage)
+                                    RaiseOnMessage((BroadCastChatMessage)message);
+                                else if (message is TeamCastChatMessage)
+                                    RaiseOnMessage((TeamCastChatMessage)message);
+                                else if (message is UniCastChatMessage)
+                                    RaiseOnMessage((UniCastChatMessage)message);
+                            }
+                            else if (message is GameMessage)
+                            {
+                                RaiseOnMessage((GameMessage)message);
+                                if (message is GateSwitchedMessage)
+                                    RaiseOnMessage((GateSwitchedMessage)message);
+                                else if (message is MissionTargetAvailableMessage)
+                                    RaiseOnMessage((MissionTargetAvailableMessage)message);
+                                else if (message is PlayerDroppedFromUniverseGroupMessage)
+                                    RaiseOnMessage((PlayerDroppedFromUniverseGroupMessage)message);
+                                else if (message is PlayerJoinedUniverseGroupMessage)
+                                    RaiseOnMessage((PlayerJoinedUniverseGroupMessage)message);
+                                else if (message is PlayerKickedFromUniverseGroupMessage)
+                                    RaiseOnMessage((PlayerKickedFromUniverseGroupMessage)message);
+                                else if (message is PlayerPartedUniverseGroupMessage)
+                                    RaiseOnMessage((PlayerPartedUniverseGroupMessage)message);
+                                else if (message is PlayerUnitBuildMessage)
+                                {
+                                    RaiseOnMessage((PlayerUnitBuildMessage)message);
+                                    if (message is PlayerUnitBuildCanceledMessage)
+                                        RaiseOnMessage((PlayerUnitBuildCanceledMessage)message);
+                                    else if (message is PlayerUnitBuildFinishedMessage)
+                                        RaiseOnMessage((PlayerUnitBuildFinishedMessage)message);
+                                    else if (message is PlayerUnitBuildStartMessage)
+                                        RaiseOnMessage((PlayerUnitBuildStartMessage)message);
+                                }
+                                else if (message is PlayerUnitContinuedMessage)
+                                    RaiseOnMessage((PlayerUnitContinuedMessage)message);
+                                else if (message is PlayerUnitDeceasedMessage)
+                                {
+                                    RaiseOnMessage((PlayerUnitDeceasedMessage)message);
+                                    if (message is PlayerUnitCollidedWithPlayerUnitMessage)
+                                        RaiseOnMessage((PlayerUnitCollidedWithPlayerUnitMessage)message);
+                                    else if (message is PlayerUnitCollidedWithUnitMessage)
+                                        RaiseOnMessage((PlayerUnitCollidedWithUnitMessage)message);
+                                    else if (message is PlayerUnitCommittedSuicideMessage)
+                                        RaiseOnMessage((PlayerUnitCommittedSuicideMessage)message);
+                                    else if (message is PlayerUnitDeceasedByBadHullRefreshingPowerUpMessage)
+                                        RaiseOnMessage((PlayerUnitDeceasedByBadHullRefreshingPowerUpMessage)message);
+                                    else if (message is PlayerUnitDeceasedByPolicyMessage)
+                                        RaiseOnMessage((PlayerUnitDeceasedByPolicyMessage)message);
+                                    else if (message is PlayerUnitLoggedOffMessage)
+                                        RaiseOnMessage((PlayerUnitLoggedOffMessage)message);
+                                    else if (message is PlayerUnitResetMessage)
+                                        RaiseOnMessage((PlayerUnitResetMessage)message);
+                                    else if (message is PlayerUnitShotByPlayerUnitMessage)
+                                        RaiseOnMessage((PlayerUnitShotByPlayerUnitMessage)message);
+                                    else if (message is PlayerUnitShotByUnitMessage)
+                                        RaiseOnMessage((PlayerUnitShotByUnitMessage)message);
+                                }
+                                else if (message is PlayerUnitHitEnemyTargetMessage)
+                                    RaiseOnMessage((PlayerUnitHitEnemyTargetMessage)message);
+                                else if (message is PlayerUnitHitMissionTargetMessage)
+                                    RaiseOnMessage((PlayerUnitHitMissionTargetMessage)message);
+                                else if (message is PlayerUnitHitOwnTargetMessage)
+                                    RaiseOnMessage((PlayerUnitHitOwnTargetMessage)message);
+                                else if (message is PlayerUnitJumpedMessage)
+                                    RaiseOnMessage((PlayerUnitJumpedMessage)message);
+                                else if (message is TargetDedominationStartedMessage)
+                                    RaiseOnMessage((TargetDedominationStartedMessage)message);
+                                else if (message is TargetDominationFinishedMessage)
+                                    RaiseOnMessage((TargetDominationFinishedMessage)message);
+                                else if (message is TargetDominationScoredMessage)
+                                    RaiseOnMessage((TargetDominationScoredMessage)message);
+                                else if (message is TargetDominationStartedMessage)
+                                    RaiseOnMessage((TargetDominationStartedMessage)message);
+                                else if (message is UniverseGroupResetMessage)
+                                    RaiseOnMessage((UniverseGroupResetMessage)message);
+                                else if (message is UniverseGroupResetPendingMessage)
+                                    RaiseOnMessage((UniverseGroupResetPendingMessage)message);
+                            }
+                            else if (message is SystemMessage)
+                            {
+                                RaiseOnMessage((SystemMessage)message);
+                                if (message is MOTDMessage)
+                                    RaiseOnMessage((MOTDMessage)message);
+                            }
+                            else
+                                RaiseOnMessage(message.GetType().Name);
+                        }
+
+                        flowControl.Commit();
+                    }
             }
+            catch { }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void Dispose()
+        {
+            UniverseGroup = null;
         }
 
         #region RaiseOnMessage Functions

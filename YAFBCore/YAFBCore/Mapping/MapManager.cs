@@ -135,6 +135,24 @@ namespace YAFBCore.Mapping
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="universeName"></param>
+        /// <param name="viewport"></param>
+        /// <param name="units"></param>
+        /// <returns></returns>
+        public bool TryGetUnits(Map map, Utils.Mathematics.RectangleF viewport, out List<MapUnit> units)
+        {
+            units = null;
+
+            map.BeginLock();
+            units = map.GetUnits(viewport);
+            map.EndLock();
+
+            return units != null;
+        }
+
+        /// <summary>
         /// Returns the searched player ship unit and the map containing it
         /// </summary>
         /// <param name="universeName">The universe to search the unit in</param>
@@ -221,6 +239,8 @@ namespace YAFBCore.Mapping
                     throw new ObjectDisposedException("MapManager is already disposed");
 
                 universeSortedMaps[map.Universe.Name].Add(map);
+
+                Session.Connection.MessageManager.AddListener(map);
             }
         }
 
@@ -292,6 +312,7 @@ namespace YAFBCore.Mapping
                                                 if (list[i].Merge(list[n]))
                                                 {
                                                     list[n].Dispose();
+                                                    Session.Connection.MessageManager.RemoveListener(list[n]);
                                                     list.RemoveAt(n); // TODO: Think about a better way to do this since RemoveAt can be taxing
 
                                                     merged = true;

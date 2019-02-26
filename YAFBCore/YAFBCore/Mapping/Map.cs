@@ -10,6 +10,7 @@ using YAFBCore.Utils;
 using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using YAFBCore.Messaging.Listeners;
 using YAFBCore.Utils.Mathematics;
 using YAFBCore.Pathfinding.Pathfinders;
 
@@ -17,7 +18,14 @@ namespace YAFBCore.Mapping
 {
     public delegate void MapUpdatedEventHandler(Map map);
     
-    public class Map : IDisposable, IComparable<Map>
+    public class Map : IDisposable, IComparable<Map>, 
+        //IPlayerDroppedFromUniverseGroupMessageListener, 
+        //IPlayerKickedFromUniverseGroupMessageListener, 
+        //IPlayerPartedUniverseGroupMessageListener, 
+        //IPlayerUnitCollidedWithPlayerUnitMessageListener,
+        //IPlayerUnitCommittedSuicideMessageListener,
+        //IPlayerUnitDeceasedByBadHullRefreshingPowerUpMessageListener,
+        IPlayerUnitDeceasedMessageListener
     {
         #region Fields and Properties
         /// <summary>
@@ -441,8 +449,8 @@ namespace YAFBCore.Mapping
                 }
             }
 
-            if (playerCount == 0)
-                Debug.WriteLine("Player not found");
+            //if (playerCount == 0)
+            //    Debug.WriteLine("Player not found");
 
             //Debug.WriteLine("Startindex: " + startIndex + " maxIndex: " + maxIndex + " returning unit count: " + mapUnits.Count + " for map (#" + Id.ToString().PadLeft(4, '0') + ")");
 
@@ -659,6 +667,24 @@ namespace YAFBCore.Mapping
                 count += mapSections[i].StillCount + mapSections[i].AgingCount + mapSections[i].PlayerCount;
 
             return count;
+        }
+        #endregion
+
+        #region MessageListeners
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="msg"></param>
+        public void OnPlayerUnitDeceasedMessage(object sender, PlayerUnitDeceasedMessage msg)
+        {
+            BeginLock();
+
+            for (int i = 0; i < mapSections.Length; i++)
+                if (TryGetPlayerShip(msg.DeceasedPlayerUnit.Name, out PlayerShipMapUnit playerShipMapUnit))
+                    mapSections[i].Remove(playerShipMapUnit);
+
+            EndLock();
         }
         #endregion
     }

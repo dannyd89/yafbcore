@@ -23,7 +23,7 @@ namespace YAFBCore.Networking
         /// <summary>
         /// Active connection
         /// </summary>
-        private readonly Connection Parent;
+        internal readonly Connection Connection;
 
         /// <summary>
         /// Use this manager to create and manage all your controllables
@@ -79,7 +79,7 @@ namespace YAFBCore.Networking
         {
             Id = counter++;
 
-            Parent = parent;
+            Connection = parent;
 
             UniverseGroup = universeGroup;
             Name = name;
@@ -161,7 +161,7 @@ namespace YAFBCore.Networking
 
                 try
                 {
-                    var player = UniverseGroup.Players[Parent.Connector.Player.Name];
+                    var player = UniverseGroup.Players[Connection.Connector.Player.Name];
 
                     while (player.ControllableInfos.List.Count > 0)
                     {

@@ -24,6 +24,11 @@ namespace YAFBCore.Controllables
         private Map currentMap;
 
         /// <summary>
+        /// 
+        /// </summary>
+        private long currentMapId = -1;
+
+        /// <summary>
         /// Current active map unit of this ship
         /// </summary>
         private PlayerShipMapUnit playerShipMapUnit;
@@ -192,27 +197,23 @@ namespace YAFBCore.Controllables
                     // Scan and wait
                     scan();
 
-                    Console.WriteLine("Scan done...");
-
                     // Let the map manager process all the scanned info
                     Session.MapManager.WaitMerge();
 
-                    //Stopwatch sw = Stopwatch.StartNew();
+                    if (playerShipMapUnit != null)
+                    {
+                        if (currentMapId != currentMap.Id)
+                        {
+                            Console.WriteLine("Current map id: " + currentMap.Id);
+                            currentMapId = currentMap.Id;
+                        }
 
-                    //currentMap.BeginLock();
-                    //var task = currentMap.GetPathFinder(NeededTileSize);
-                    //Console.WriteLine("Is Completed? " + task.IsCompleted);
-                    //Pathfinding.AStarPathing.AStarPathfinder pathFinder = task.Result;
-                    //currentMap.EndLock();
+                        // Perform any shoot command if available
+                        shoot();
 
-
-                    //Console.WriteLine("Rasterizing time: " + sw.Elapsed);
-
-                    // Perform any shoot command if available
-                    shoot();
-
-                    // Perform any move command if available
-                    move();
+                        // Perform any move command if available
+                        move();
+                    }
 
                     // Commit actions queued by this tick
                     flowControl.FlowControl.Commit();
