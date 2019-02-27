@@ -107,6 +107,14 @@ namespace YAFBCore.Networking
 
             Connection connection = new Connection(email);
             connection.connector = new Connector(email, password);
+
+            foreach (var changeLogEntry in connection.connector.Changelog)
+            {
+                foreach (string change in changeLogEntry.Changes)
+                    Console.WriteLine(change);
+                Console.WriteLine(changeLogEntry.Description);
+            }
+
             connection.messageManager = new MessageManager(connection);
 
             return connection;

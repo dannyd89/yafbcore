@@ -37,15 +37,13 @@ namespace YAFBCore.Mapping.Units
         protected List<UnitOrbitingState> orbitingList;
 
         #region Properties
+
+        public virtual int AgeMax => mobility == Mobility.Still ? -1 : 5;
+
         /// <summary>
         /// Tells if the unit is aging over time
         /// </summary>
-        public virtual bool IsAging => false;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public virtual int AgeMax => -1;
+        public virtual bool IsAging => mobility != Mobility.Still;
 
         /// <summary>
         /// Returns the current age of the unit

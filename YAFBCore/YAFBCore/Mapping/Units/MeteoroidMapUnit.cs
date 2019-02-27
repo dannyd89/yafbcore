@@ -12,5 +12,14 @@ namespace YAFBCore.Mapping.Units
 		{
 			this.meteoroid = meteoroid;
 		}
-	}
+
+        public override bool IsAging => mobility == Mobility.Steady;
+
+        internal override bool Age()
+        {
+            Console.WriteLine("Aging steady meteoroid");
+
+            return base.Age();
+        }
+    }
 }

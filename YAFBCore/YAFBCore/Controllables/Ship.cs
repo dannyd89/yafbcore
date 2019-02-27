@@ -93,6 +93,11 @@ namespace YAFBCore.Controllables
         private Flattiverse.Vector movement = Flattiverse.Vector.FromNull();
 
         public Flattiverse.Vector Movement => movement;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private Flattiverse.Vector expectedPosition;
         #endregion
 
         #region Shooting Fields
@@ -172,9 +177,9 @@ namespace YAFBCore.Controllables
         /// </summary>
         private void resetWaiters()
         {
-            ScanWaiter.Reset();
-            MoveWaiter.Reset();
-            ShootWaiter.Reset();
+            ScanWaiter.Set();
+            MoveWaiter.Set();
+            ShootWaiter.Set();
         }
 
         /// <summary>
@@ -196,9 +201,6 @@ namespace YAFBCore.Controllables
 
                     // Scan and wait
                     scan();
-
-                    // Let the map manager process all the scanned info
-                    Session.MapManager.WaitMerge();
 
                     if (playerShipMapUnit != null)
                     {
@@ -273,15 +275,18 @@ namespace YAFBCore.Controllables
 
                 // Get the nearest still unit as reference point
                 for (int i = 0; i < scannedUnits.Count; i++)
-                    if (scannedUnits[i].Mobility == Flattiverse.Mobility.Still
+                    if ((scannedUnits[i].Mobility == Flattiverse.Mobility.Still || scannedUnits[i].Mobility == Flattiverse.Mobility.Steady)
                         && scannedUnits[i].Kind != Flattiverse.UnitKind.Explosion
-                        && (scanReference == null || scannedUnits[i].Position.Length < scanReference.Length))
+                        && (scanReference == null || scannedUnits[i].Position < scanReference))
                         scanReference = scannedUnits[i].Position;
 
                 Map map = Map.Create(this, scannedUnits);
                 map.Updated += Map_MapUpdated;
 
                 Session.MapManager.Add(map);
+
+                // Let the map manager process all the scanned info
+                Session.MapManager.WaitMerge();
             }
             catch (Exception ex)
             {
@@ -289,7 +294,7 @@ namespace YAFBCore.Controllables
                 Debug.WriteLine(ex.Message);
                 Debug.WriteLine(ex.StackTrace);
 
-                TryContinue();
+                //TryContinue();
             }
             finally
             {
@@ -324,6 +329,8 @@ namespace YAFBCore.Controllables
                     {
                         lastMoveCommand = pathfindingMoveCommands.First.Value;
                         pathfindingMoveCommands.RemoveFirst();
+
+                        lastMoveCommand.DontStop = pathfindingMoveCommands.Count > 0;
                     }
                 }
 
@@ -332,7 +339,7 @@ namespace YAFBCore.Controllables
 
                 movement = lastMoveCommand.Position - playerShipMapUnit.PositionInternal;
 
-                if (movement < 250f)
+                if (movement < 250f && !lastMoveCommand.DontStop)
                 {
                     movement.Length = ship.EngineAcceleration.Limit * movement.Length;
 
@@ -342,9 +349,23 @@ namespace YAFBCore.Controllables
                         movement.Length = ship.EngineAcceleration.Limit * 0.99f;
                 }
                 else
+                {
+                    if (expectedPosition != null && (expectedPosition - playerShipMapUnit.PositionInternal) > 1f)
+                    {
+                        movement = movement + (expectedPosition - playerShipMapUnit.PositionInternal);
+
+                        //if (movement > ship.EngineAcceleration.Limit * 0.99f)
+                        //    movement.Length = ship.EngineAcceleration.Limit * 0.99f;
+                    }
+
                     movement.Length = ship.EngineAcceleration.Limit * 0.99f;
+                }
+
+                
 
                 ship.Move(movement);
+
+                expectedPosition = playerShipMapUnit.PositionInternal + movement;
             }
             catch (Exception ex)
             {

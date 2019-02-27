@@ -11,6 +11,7 @@ namespace YAFBCore.Controllables.Commands
 
         internal readonly Flattiverse.Vector Position;
 
+        internal bool DontStop;
         internal bool Reached;
 
         public override CommandType Type => CommandType.Move;

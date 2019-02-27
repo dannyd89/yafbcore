@@ -12,5 +12,7 @@ namespace YAFBCore.Mapping.Units
 		{
 			this.moon = moon;
 		}
-	}
+
+        public override bool IsAging => mobility == Mobility.Steady;
+    }
 }

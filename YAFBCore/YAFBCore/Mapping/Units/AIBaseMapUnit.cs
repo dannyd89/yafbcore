@@ -12,5 +12,5 @@ namespace YAFBCore.Mapping.Units
 		{
 			this.aIBase = aIBase;
 		}
-	}
+    }
 }

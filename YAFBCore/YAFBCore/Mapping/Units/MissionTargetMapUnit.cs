@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Flattiverse;
 
 namespace YAFBCore.Mapping.Units
@@ -12,5 +14,11 @@ namespace YAFBCore.Mapping.Units
 		{
 			this.missionTarget = missionTarget;
 		}
-	}
+
+        public override bool IsAging => mobility == Mobility.Steady;
+
+        public int SequenceNumber => missionTarget.SequenceNumber;
+
+        public ReadOnlyCollection<Vector> Hints => missionTarget.Hints;
+    }
 }

@@ -49,9 +49,9 @@ namespace YAFBCore.Mapping
         public readonly Universe Universe;
 
         /// <summary>
-        /// Holding all known still units in this map for faster merging
+        /// Holding all known units which can be used as scan references in this map for faster merging
         /// </summary>
-        private Dictionary<string, MapUnit> stillUnits = new Dictionary<string, MapUnit>();
+        internal Dictionary<string, MapUnit> ScanReferences = new Dictionary<string, MapUnit>();
 
         /// <summary>
         /// List to find own player units faster
@@ -176,7 +176,7 @@ namespace YAFBCore.Mapping
                 Vector movementOffset = Vector.FromNull();
                 foreach (Unit unit in units)
                     if (unit.Kind != UnitKind.Explosion
-                        && unit.Mobility == Mobility.Still)
+                        && (unit.Mobility == Mobility.Still || unit.Mobility == Mobility.Steady))
                     {
                         movementOffset = unit.Movement;
                         break;
@@ -199,8 +199,9 @@ namespace YAFBCore.Mapping
 
                     map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal.X, mapUnit.PositionInternal.Y)].AddOrUpdate(mapUnit);
 
-                    if (mapUnit.Mobility == Mobility.Still && mapUnit.Kind != UnitKind.Explosion)
-                        map.stillUnits.Add(mapUnit.Name, mapUnit);
+                    if ((mapUnit.Mobility == Mobility.Still || unit.Mobility == Mobility.Steady) 
+                        && mapUnit.Kind != UnitKind.Explosion)
+                        map.ScanReferences.Add(mapUnit.Name, mapUnit);
                 }
 
                 mapUnit = MapUnitFactory.GetMapUnit(map, creator.Base, movementOffset);
@@ -274,8 +275,8 @@ namespace YAFBCore.Mapping
             Vector positionOffset = null;
 
             MapUnit mapUnit;
-            foreach (KeyValuePair<string, MapUnit> unitKvp in other.stillUnits)
-                if (stillUnits.TryGetValue(unitKvp.Key, out mapUnit))
+            foreach (KeyValuePair<string, MapUnit> unitKvp in other.ScanReferences)
+                if (ScanReferences.TryGetValue(unitKvp.Key, out mapUnit))
                 {
                     positionOffset = mapUnit.PositionInternal - unitKvp.Value.PositionInternal;
                     break;
@@ -288,23 +289,19 @@ namespace YAFBCore.Mapping
             for (int otherIndex = 0; otherIndex < other.mapSections.Length; otherIndex++)
             {
                 MapSection mapSection = other.mapSections[otherIndex];
-                MapUnit[] tempStillUnits = mapSection.StillUnits;
+                //MapUnit[] tempStillUnits = mapSection.StillUnits;
 
                 if (mapSection.StillCount > 0)
                 {
-                    addOrUpdateUnits(tempStillUnits, positionOffset);
+                    addOrUpdateUnits(mapSection.StillUnits, positionOffset);
 
                     isUpdated = true;
                 }
 
-                for (int i = 0; i < tempStillUnits.Length; i++)
+                foreach (KeyValuePair<string, MapUnit> kvp in other.ScanReferences)
                 {
-                    if (tempStillUnits[i] == null)
-                        break;
-
-                    if (tempStillUnits[i].Kind != UnitKind.Explosion 
-                        && !stillUnits.TryGetValue(tempStillUnits[i].Name, out mapUnit))
-                        stillUnits.Add(tempStillUnits[i].Name, tempStillUnits[i]);
+                    if (!ScanReferences.ContainsKey(kvp.Key))
+                        ScanReferences.Add(kvp.Key, kvp.Value);
                 }
 
                 if (mapSection.AgingCount > 0)
@@ -422,31 +419,34 @@ namespace YAFBCore.Mapping
             int maxIndex = getMapSectionIndex(viewport.Right, viewport.Bottom);
 
             int playerCount = 0;
-            for (int i = startIndex; i <= maxIndex; i++)
+            for (int i = 0; i < mapSections.Length; i++)
             {
                 MapSection mapSection = mapSections[i];
 
-                if (mapSection.Bounds.Intersects(viewport))
-                {
+                //if (mapSection.Bounds.Intersects(viewport))
+                //{
+                if (i >= startIndex && i <= maxIndex)
                     for (int x = 0; x < mapSection.StillCount; x++)
-                        mapUnits.Add(mapSection.StillUnits[x]);
+                        if (viewport.Contains(mapSection.StillUnits[x].PositionInternal))
+                            mapUnits.Add(mapSection.StillUnits[x]);
 
                     for (int x = 0; x < mapSection.AgingCount; x++)
-                        if (!mapUnits.Contains(mapSection.AgingUnits[x]))
+                        if (viewport.Contains(mapSection.AgingUnits[x].PositionInternal) && !mapUnits.Contains(mapSection.AgingUnits[x]))
                         {
                             mapUnits.Add(mapSection.AgingUnits[x]);
 
-                            if (mapSection.AgingUnits[x] is PlayerShipMapUnit)
-                                playerCount++;
+                            //if (mapSection.AgingUnits[x] is PlayerShipMapUnit)
+                            //    playerCount++;
                         }
 
-                    for (int x = 0; x < mapSection.PlayerCount; x++)
-                        if (!mapUnits.Contains(mapSection.PlayerUnits[x]))
-                        {
-                            mapUnits.Add(mapSection.PlayerUnits[x]);
-                            playerCount++;
-                        }
-                }
+                //if (i >= startIndex && i <= maxIndex)
+                //    for (int x = 0; x < mapSection.PlayerCount; x++)
+                //        if (viewport.Contains(mapSection.PlayerUnits[x].PositionInternal) && !mapUnits.Contains(mapSection.PlayerUnits[x]))
+                //        {
+                //            mapUnits.Add(mapSection.PlayerUnits[x]);
+                //            //playerCount++;
+                //        }
+                //}
             }
 
             //if (playerCount == 0)
@@ -541,7 +541,7 @@ namespace YAFBCore.Mapping
             isDisposed = true;
 
             mapSections = null;
-            stillUnits = null;
+            ScanReferences = null;
 
             lockMapEvent.Dispose();
         }
@@ -565,7 +565,7 @@ namespace YAFBCore.Mapping
             }
             else
             {
-                int tempCount = 3 + (int)Math.Pow(2, sectionExtensionCounter++);
+                int tempCount = 3 + 2 * sectionExtensionCounter++;
 
                 var temp = new MapSection[tempCount * tempCount];
 
@@ -641,10 +641,15 @@ namespace YAFBCore.Mapping
 
                 mapUnit.PositionInternal = positionOffset + mapUnit.PositionInternal;
 
-                if (mapUnit.IsOrbiting)
-                    mapUnit.OrbitingCenter = positionOffset + mapUnit.OrbitingCenter;
+                int currentIndex;
 
-                int currentIndex = getMapSectionIndex(mapUnit.PositionInternal);
+                if (mapUnit.IsOrbiting)
+                {
+                    mapUnit.OrbitingCenter = positionOffset + mapUnit.OrbitingCenter;
+                    currentIndex = getMapSectionIndex(mapUnit.OrbitingCenter);
+                }
+                else
+                    currentIndex = getMapSectionIndex(mapUnit.PositionInternal);
 
                 for (int a = 0; a < mapSections.Length; a++)
                     if (a != currentIndex && mapSections[a].Remove(mapUnit))

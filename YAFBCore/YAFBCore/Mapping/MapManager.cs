@@ -1,5 +1,6 @@
 ﻿using Flattiverse;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -9,7 +10,6 @@ using YAFBCore.Networking;
 
 namespace YAFBCore.Mapping
 {
-
     public class MapManager : IDisposable
     {
         #region Fields and Properties
@@ -26,27 +26,17 @@ namespace YAFBCore.Mapping
         /// <summary>
         /// Main maps for each universe in a group
         /// </summary>
-        private Dictionary<string, Map> mainMaps;
+        private ConcurrentDictionary<string, Map> mainMaps;
 
         /// <summary>
         /// A dictionary to sort maps according to the available universes in a group
         /// </summary>
-        private Dictionary<string, List<Map>> universeSortedMaps;
+        private ConcurrentDictionary<string, List<Map>> universeSortedMaps;
 
         /// <summary>
         /// Worker thread to merge maps etc.
         /// </summary>
         private Thread workerThread;
-
-        /// <summary>
-        /// Used to synchronize sortedMaps
-        /// </summary>
-        private object syncSortedMapsObj = new object();
-
-        /// <summary>
-        /// Used to synchronize mainMaps
-        /// </summary>
-        private object syncMainMapObj = new object();
 
         /// <summary>
         /// Wait event so anything can wait for the map manager to do its work
@@ -73,13 +63,13 @@ namespace YAFBCore.Mapping
             Session = universeSession;
             UniverseGroup = universeSession.UniverseGroup;
 
-            mainMaps = new Dictionary<string, Map>();
-            universeSortedMaps = new Dictionary<string, List<Map>>();
+            mainMaps = new ConcurrentDictionary<string, Map>(Environment.ProcessorCount * 2, 4);
+            universeSortedMaps = new ConcurrentDictionary<string, List<Map>>(Environment.ProcessorCount * 2, 4);
 
             foreach (Universe universe in UniverseGroup.Universes)
             {
-                mainMaps.Add(universe.Name, null);
-                universeSortedMaps.Add(universe.Name, new List<Map>());
+                mainMaps.TryAdd(universe.Name, null);
+                universeSortedMaps.TryAdd(universe.Name, new List<Map>());
             }
 
             workerThread = new Thread(new ThreadStart(worker));
@@ -95,8 +85,7 @@ namespace YAFBCore.Mapping
         {
             get
             {
-                lock (syncMainMapObj)
-                    return mainMaps[universeName];
+                return mainMaps[universeName];
             }
         }
 
@@ -108,8 +97,7 @@ namespace YAFBCore.Mapping
         /// <returns></returns>
         public bool TryGetMap(string universeName, out Map map)
         {
-            lock (syncMainMapObj)
-                return mainMaps.TryGetValue(universeName, out map);
+            return mainMaps.TryGetValue(universeName, out map);
         }
 
         /// <summary>
@@ -172,31 +160,28 @@ namespace YAFBCore.Mapping
 
                 if (!tempMainMap.TryGetPlayerShip(unitName, out playerShipMapUnit))
                 {
-                    lock (syncSortedMapsObj)
-                    {
-                        List<Map> universeMaps = universeSortedMaps[universeName];
+                    List<Map> universeMaps = universeSortedMaps[universeName];
 
-                        if (universeMaps.Count > 1)
-                            for (int i = 1; i < universeMaps.Count; i++)
+                    if (universeMaps.Count > 1)
+                        for (int i = 1; i < universeMaps.Count; i++)
+                        {
+                            Map tempMap = universeMaps[i];
+
+                            try
                             {
-                                Map tempMap = universeMaps[i];
+                                tempMap.BeginLock();
 
-                                try
+                                if (tempMap.TryGetPlayerShip(unitName, out playerShipMapUnit))
                                 {
-                                    tempMap.BeginLock();
-
-                                    if (tempMap.TryGetPlayerShip(unitName, out playerShipMapUnit))
-                                    {
-                                        map = tempMap;
-                                        break;
-                                    }
-                                }
-                                finally
-                                {
-                                    tempMap.EndLock();
+                                    map = tempMap;
+                                    break;
                                 }
                             }
-                    }
+                            finally
+                            {
+                                tempMap.EndLock();
+                            }
+                        }
                 }
                 else
                     map = tempMainMap;
@@ -212,19 +197,15 @@ namespace YAFBCore.Mapping
         /// </summary>
         public void Dispose()
         {
-            lock (syncSortedMapsObj)
-                lock (syncMainMapObj)
-                {
-                    if (isDisposed)
-                        throw new ObjectDisposedException("MapManager is already disposed");
+            if (isDisposed)
+                throw new ObjectDisposedException("MapManager is already disposed");
 
-                    isDisposed = true;
+            isDisposed = true;
 
-                    mainMaps = null;
-                    universeSortedMaps = null;
+            mainMaps = null;
+            universeSortedMaps = null;
 
-                    waitMergeEvent.Dispose();
-                }
+            waitMergeEvent.Dispose();
         }
 
         /// <summary>
@@ -233,11 +214,11 @@ namespace YAFBCore.Mapping
         /// <param name="map"></param>
         internal void Add(Map map)
         {
-            lock (syncSortedMapsObj)
-            {
-                if (isDisposed)
-                    throw new ObjectDisposedException("MapManager is already disposed");
+            if (isDisposed)
+                throw new ObjectDisposedException("MapManager is already disposed");
 
+            if (map.ScanReferences.Count > 0)
+            {
                 universeSortedMaps[map.Universe.Name].Add(map);
 
                 Session.Connection.MessageManager.AddListener(map);
@@ -282,8 +263,7 @@ namespace YAFBCore.Mapping
                         var ships = Session.ControllablesManager.Ships;
                         for (int i = 0; i < ships.Length; i++)
                             ships[i].ScanWaiter.Wait();
-
-                        lock (syncSortedMapsObj)
+                        
                             foreach (KeyValuePair<string, List<Map>> kvp in universeSortedMaps)
                             {
                                 List<Map> list = kvp.Value;
@@ -322,9 +302,8 @@ namespace YAFBCore.Mapping
                                     }
 
                                     list.Sort();
-
-                                    lock (syncMainMapObj)
-                                        mainMaps[kvp.Key] = list[0];
+                                
+                                    mainMaps[kvp.Key] = list[0];
 
                                     foreach (Map map in list)
                                     {
