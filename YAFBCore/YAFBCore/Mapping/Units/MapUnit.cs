@@ -38,7 +38,7 @@ namespace YAFBCore.Mapping.Units
 
         #region Properties
 
-        public virtual int AgeMax => mobility == Mobility.Still ? -1 : 5;
+        public virtual int AgeMax => mobility == Mobility.Steady ? -1 : 5;
 
         /// <summary>
         /// Tells if the unit is aging over time
@@ -64,6 +64,11 @@ namespace YAFBCore.Mapping.Units
         /// 
         /// </summary>
         public bool IsMasking => isMasking;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public virtual bool HasListeners => false;
 
         /// <summary>
         /// 

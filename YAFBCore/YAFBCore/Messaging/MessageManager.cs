@@ -55,6 +55,8 @@ namespace YAFBCore.Messaging
 
     public class MessageManager : IDisposable
     {
+        internal static MessageManager Instance;
+
         internal readonly Connection Connection;
 
         private Task messageTask;
@@ -139,6 +141,8 @@ namespace YAFBCore.Messaging
         /// <param name="connection"></param>
         internal MessageManager(Connection connection)
         {
+            Instance = this;
+
             Connection = connection;
         }
         

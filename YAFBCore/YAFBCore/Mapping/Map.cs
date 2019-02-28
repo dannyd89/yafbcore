@@ -169,55 +169,44 @@ namespace YAFBCore.Mapping
         /// <param name="units">Units which were scanned</param>
         public static Map Create(Controllables.Controllable creator, List<Unit> units)
         {
-#if DEBUG
-            try
-            {
-#endif
-                Vector movementOffset = Vector.FromNull();
-                foreach (Unit unit in units)
-                    if (unit.Kind != UnitKind.Explosion
-                        && (unit.Mobility == Mobility.Still || unit.Mobility == Mobility.Steady))
-                    {
-                        movementOffset = unit.Movement;
-                        break;
-                    }
-
-                movementOffset = new Flattiverse.Vector(-movementOffset.X, -movementOffset.Y);
-
-                Universe universe = creator.Base.Universe;
-                string currentPlayerName = universe.Connector.Player.Name;
-
-                Map map = new Map(universe);
-
-                MapUnit mapUnit;
-                foreach (Unit unit in units)
+            Vector movementOffset = Vector.FromNull();
+            foreach (Unit unit in units)
+                if (unit.Kind != UnitKind.Explosion
+                    && (unit.Mobility == Mobility.Still || unit.Mobility == Mobility.Steady))
                 {
-                    if (unit is PlayerUnit playerUnit && playerUnit.Player.Name == currentPlayerName)
-                        continue;
-
-                    mapUnit = MapUnitFactory.GetMapUnit(map, unit, movementOffset);
-
-                    map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal.X, mapUnit.PositionInternal.Y)].AddOrUpdate(mapUnit);
-
-                    if ((mapUnit.Mobility == Mobility.Still || unit.Mobility == Mobility.Steady) 
-                        && mapUnit.Kind != UnitKind.Explosion)
-                        map.ScanReferences.Add(mapUnit.Name, mapUnit);
+                    movementOffset = unit.Movement;
+                    break;
                 }
 
-                mapUnit = MapUnitFactory.GetMapUnit(map, creator.Base, movementOffset);
-                map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal)].AddOrUpdate(mapUnit);
+            movementOffset = new Flattiverse.Vector(-movementOffset.X, -movementOffset.Y);
 
-                return map;
-#if DEBUG
-            }
-            catch (Exception ex)
+            Universe universe = creator.Base.Universe;
+            string currentPlayerName = universe.Connector.Player.Name;
+
+            Map map = new Map(universe);
+
+            MapUnit mapUnit;
+            foreach (Unit unit in units)
             {
-                Debug.WriteLine(ex.Message);
-                Debug.WriteLine(ex.StackTrace);
+                if (unit is PlayerUnit playerUnit && playerUnit.Player.Name == currentPlayerName)
+                    continue;
 
-                return null;
+                mapUnit = MapUnitFactory.GetMapUnit(map, unit, movementOffset);
+
+                if (mapUnit.HasListeners)
+                    Messaging.MessageManager.Instance.AddListener(mapUnit);
+
+                map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal.X, mapUnit.PositionInternal.Y)].AddOrUpdate(mapUnit);
+
+                if ((mapUnit.Mobility == Mobility.Still || unit.Mobility == Mobility.Steady)
+                    && mapUnit.Kind != UnitKind.Explosion)
+                    map.ScanReferences.Add(mapUnit.Name, mapUnit);
             }
-#endif
+
+            mapUnit = MapUnitFactory.GetMapUnit(map, creator.Base, movementOffset);
+            map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal)].AddOrUpdate(mapUnit);
+
+            return map;
         }
         #endregion
 

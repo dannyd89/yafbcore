@@ -25,6 +25,9 @@ namespace YAFBCore.Mapping.Units
 			: base(map, playerShip, movementOffset)
 		{
 			this.playerShip = playerShip;
+
+            PlayerName = playerShip.Player.Name;
+            TeamName = playerShip.Team.Name;
 		}
 
         /// <summary>
@@ -47,6 +50,9 @@ namespace YAFBCore.Mapping.Units
                    movementOffset)
         {
             this.controllable = controllable;
+
+            PlayerName = controllable.Name;
+            TeamName = controllable.Universe.Connector.Player.Team.Name;
         }
 
         /// <summary>
@@ -73,6 +79,37 @@ namespace YAFBCore.Mapping.Units
         /// Max Energy
         /// </summary>
         public float EnergyMax => controllable != null ? controllable.EnergyMax : 0f;
+
+        /// <summary>
+        /// Current hull in percentage
+        /// </summary>
+        public float Hull => controllable != null ? controllable.Hull / Math.Max(controllable.HullMax, 1f) : playerShip.ControllableInfo.Hull / Math.Max(playerShip.ControllableInfo.HullMax, 1f);
+
+        /// <summary>
+        /// Current shield in percentage
+        /// </summary>
+        public float Shield => controllable != null ? controllable.Shield / Math.Max(controllable.ShieldMax, 1f) : playerShip.ControllableInfo.Shield / Math.Max(playerShip.ControllableInfo.ShieldMax, 1f);
+
+        /// <summary>
+        /// Current amount of shots available
+        /// </summary>
+        public float CurrentShots => controllable.WeaponProductionStatus;
+
+        /// <summary>
+        /// Max amount of shots possible
+        /// </summary>
+        public float MaxShots => controllable.WeaponProductionLoad;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string PlayerName { get; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string TeamName { get; }
+
 
         /// <summary>
         /// 
