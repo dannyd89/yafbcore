@@ -11,6 +11,12 @@ namespace YAFBCore.Mapping.Units
 			: base(map, doubleDamagePowerUp, movementOffset)
 		{
 			this.doubleDamagePowerUp = doubleDamagePowerUp;
-		}
-	}
+        }
+
+        public override int AgeMax => 5;
+
+        public override bool IsAging => true;
+
+        public override Mobility Mobility => Mobility.Mobile;
+    }
 }

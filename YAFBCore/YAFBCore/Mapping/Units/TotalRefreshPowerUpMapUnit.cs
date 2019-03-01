@@ -11,6 +11,12 @@ namespace YAFBCore.Mapping.Units
 			: base(map, totalRefreshPowerUp, movementOffset)
 		{
 			this.totalRefreshPowerUp = totalRefreshPowerUp;
-		}
-	}
+        }
+
+        public override int AgeMax => 5;
+
+        public override bool IsAging => true;
+
+        public override Mobility Mobility => Mobility.Mobile;
+    }
 }

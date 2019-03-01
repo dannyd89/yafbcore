@@ -46,12 +46,12 @@ namespace YAFBCore.Pathfinding.Pathfinders
         /// <summary>
         /// 
         /// </summary>
-        private bool isDisposed;
+        //private bool isDisposed;
 
         /// <summary>
         /// 
         /// </summary>
-        public bool IsDisposed => isDisposed;
+        //public bool IsDisposed => isDisposed;
 
         /// <summary>
         /// Creates a 
@@ -157,8 +157,8 @@ namespace YAFBCore.Pathfinding.Pathfinders
             try
             {
 #endif
-                if (isDisposed)
-                    return null;
+                //if (isDisposed)
+                //    return null;
 
                 float size = (currentSectionCount / 2f) * Map.SectionSize;
                 Transformator transformator = new Transformator(-size, size, 0, currentSectionCount);
@@ -302,10 +302,10 @@ namespace YAFBCore.Pathfinding.Pathfinders
                 Console.WriteLine("MapPathfinder.Pathfind: ");
                 Console.WriteLine(ex.Message);
                 Console.WriteLine(ex.StackTrace);
+
+                return null;
             }
 #endif
-
-            return null;
         }
 
         /// <summary>

@@ -12,5 +12,11 @@ namespace YAFBCore.Mapping.Units
 		{
 			this.cloakPowerUp = cloakPowerUp;
 		}
-	}
+
+        public override int AgeMax => 5;
+
+        public override bool IsAging => true;
+
+        public override Mobility Mobility => Mobility.Mobile;
+    }
 }

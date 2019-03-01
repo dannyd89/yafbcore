@@ -32,15 +32,14 @@ namespace YAFBCore.Controllables.Commands
         internal void TempSetup(Flattiverse.Ship ship, Mapping.Units.PlayerShipMapUnit playerShipMapUnit)
         {
             Direction = Position - playerShipMapUnit.PositionInternal;
+            Direction = Direction + playerShipMapUnit.MovementInternal;
 
             Time = (1 + (int)(Direction.Length / ship.WeaponShot.Speed.Limit * 0.99f));
-
-            Direction.Length /= Time;
 
             if (Time > ship.WeaponShot.Time.Limit)
                 Time = (int)(ship.WeaponShot.Time.Limit * 0.99f);
 
-            Direction = Direction + playerShipMapUnit.MovementInternal;
+            Direction.Length /= Time;
 
             if (Direction > ship.WeaponShot.Speed.Limit * 0.99f)
                 Direction.Length = ship.WeaponShot.Speed.Limit * 0.99f;

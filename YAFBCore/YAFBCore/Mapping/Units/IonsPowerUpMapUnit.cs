@@ -11,6 +11,12 @@ namespace YAFBCore.Mapping.Units
 			: base(map, ionsPowerUp, movementOffset)
 		{
 			this.ionsPowerUp = ionsPowerUp;
-		}
-	}
+        }
+
+        public override int AgeMax => 5;
+
+        public override bool IsAging => true;
+
+        public override Mobility Mobility => Mobility.Mobile;
+    }
 }

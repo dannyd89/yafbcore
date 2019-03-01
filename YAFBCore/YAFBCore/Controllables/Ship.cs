@@ -115,6 +115,11 @@ namespace YAFBCore.Controllables
         /// Stores the issued move commands
         /// </summary>
         private Queue<ShootCommand> userShootCommands = new Queue<ShootCommand>();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public float MaxShootRadius => ship.WeaponShot.Speed.Limit * ship.WeaponShot.Time.Limit;
         #endregion
 
         #region Properties
@@ -213,6 +218,13 @@ namespace YAFBCore.Controllables
                         // Perform any shoot command if available
                         shoot();
 
+                        //try
+                        //{
+                        //    if (EfficientLoading)
+                        //        ship.LoadShields(ship.ShieldLoad.Limit * 0.7f);
+                        //}
+                        //catch { }
+
                         // Perform any move command if available
                         move();
                     }
@@ -252,14 +264,17 @@ namespace YAFBCore.Controllables
 
                     scanInfos.Add(new Flattiverse.ScanInfo(scanReference.Angle - oneFourthDegree, 
                                                            scanReference.Angle + oneFourthDegree, 
-                                                           ship.ScannerArea.Limit * 0.99f));
+                                                           ship.ScannerArea.Limit * 0.80f));
 
                     --scannerCount;
                 }
+
+                if (EfficientLoading)
+                    --scannerCount;
                 
                 for (int i = 0; i < scannerCount; i++)
                 {
-                    Flattiverse.ScanInfo scanInfo = new Flattiverse.ScanInfo(currentScanDegree, currentScanDegree + ship.ScannerDegreePerScan, ship.ScannerArea.Limit * 0.99f);
+                    Flattiverse.ScanInfo scanInfo = new Flattiverse.ScanInfo(currentScanDegree, currentScanDegree + ship.ScannerDegreePerScan, ship.ScannerArea.Limit * 0.90f);
 
                     currentScanDegree += ship.ScannerDegreePerScan;
 
@@ -480,6 +495,8 @@ namespace YAFBCore.Controllables
                 return false;
             }
         }
+
+        public bool EfficientLoading;
 
         /// <summary>
         /// Queues different commands into this ship and will be handled afterwards

@@ -78,7 +78,7 @@ namespace YAFBCore.Mapping.Units
         /// <summary>
         /// 
         /// </summary>
-        public Mobility Mobility => mobility;
+        public virtual Mobility Mobility => mobility;
 
         // TODO: Überlegen ob es hier sinnvoll ist immer einen neuen Vector zu erzeugen, wegen dem GC
 

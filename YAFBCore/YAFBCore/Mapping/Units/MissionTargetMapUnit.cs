@@ -27,6 +27,21 @@ namespace YAFBCore.Mapping.Units
         /// <summary>
         /// 
         /// </summary>
+        public override int AgeMax => 50;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public override bool IsAging => true;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public override Mobility Mobility => Mobility.Mobile;
+
+        /// <summary>
+        /// 
+        /// </summary>
         public float DominationRadius { get; }
 
         /// <summary>
@@ -92,12 +107,16 @@ namespace YAFBCore.Mapping.Units
         {
             if (Name == msg.MissionTargetName)
                 DominatingTeam = msg.DominatingTeam;
+
+            Console.WriteLine("Dedomination Message");
         }
 
         public void OnTargetDominationStartedMessage(object sender, TargetDominationStartedMessage msg)
         {
             if (Name == msg.MissionTargetName)
                 DominatingTeam = msg.DominatingTeam;
+
+            Console.WriteLine("Domination started Message");
         }
 
         public void OnTargetDominationFinishedMessage(object sender, TargetDominationFinishedMessage msg)
@@ -107,6 +126,8 @@ namespace YAFBCore.Mapping.Units
                 DominatingTeam = null;
                 Team = msg.DominatingTeam;
             }
+
+            Console.WriteLine("Domination finished Message");
         }
         #endregion
     }

@@ -54,6 +54,11 @@ namespace YAFBCore.Mapping
         internal Dictionary<string, MapUnit> ScanReferences = new Dictionary<string, MapUnit>();
 
         /// <summary>
+        /// List of all message listeners which need to be unsubscribed on dispose
+        /// </summary>
+        private List<MapUnit> listeners = new List<MapUnit>();
+
+        /// <summary>
         /// List to find own player units faster
         /// </summary>
         private Dictionary<string, PlayerShipMapUnit> ownPlayerUnits = new Dictionary<string, PlayerShipMapUnit>();
@@ -194,7 +199,10 @@ namespace YAFBCore.Mapping
                 mapUnit = MapUnitFactory.GetMapUnit(map, unit, movementOffset);
 
                 if (mapUnit.HasListeners)
+                {
                     Messaging.MessageManager.Instance.AddListener(mapUnit);
+                    map.listeners.Add(mapUnit);
+                }
 
                 map.mapSections[map.getMapSectionIndex(mapUnit.PositionInternal.X, mapUnit.PositionInternal.Y)].AddOrUpdate(mapUnit);
 
@@ -347,7 +355,7 @@ namespace YAFBCore.Mapping
                             if (mapUnit.Kind == UnitKind.PlayerShip)
                                 for(int p = 0; p < mapSection.PlayerCount; p++)
                                 {
-                                    Debug.Assert(mapSection.PlayerUnits[p] != null);
+                                    //Debug.Assert(mapSection.PlayerUnits[p] != null);
 
                                     if (mapSection.PlayerUnits[p].Name == mapUnit.Name)
                                         mapSection.PlayerUnits[p] = null;
@@ -355,7 +363,7 @@ namespace YAFBCore.Mapping
                             else if (mapUnit.Kind == UnitKind.Explosion)
                                 for (int s = 0; s < mapSection.StillCount; s++)
                                 {
-                                    Debug.Assert(mapSection.StillUnits[s] != null);
+                                    //Debug.Assert(mapSection.StillUnits[s] != null);
 
                                     if (mapSection.StillUnits[s].Name == mapUnit.Name)
                                         mapSection.StillUnits[s] = null;
@@ -407,7 +415,7 @@ namespace YAFBCore.Mapping
             int startIndex = getMapSectionIndex(viewport.Left, viewport.Top);
             int maxIndex = getMapSectionIndex(viewport.Right, viewport.Bottom);
 
-            int playerCount = 0;
+            //int playerCount = 0;
             for (int i = 0; i < mapSections.Length; i++)
             {
                 MapSection mapSection = mapSections[i];
@@ -531,6 +539,9 @@ namespace YAFBCore.Mapping
 
             mapSections = null;
             ScanReferences = null;
+
+            foreach (MapUnit mapUnit in listeners)
+                Messaging.MessageManager.Instance.RemoveListener(mapUnit);
 
             lockMapEvent.Dispose();
         }

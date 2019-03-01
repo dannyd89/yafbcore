@@ -738,21 +738,29 @@ namespace YAFBCore.Messaging
         private void RaiseOnMessage(TargetDedominationStartedMessage targetDedominationStartedMessage)
         {
             TargetDeDominationStartedMessageReceived?.Invoke(this, targetDedominationStartedMessage);
+
+            Console.WriteLine(targetDedominationStartedMessage.DominatingTeam.Name + " nimmt Ziel  " + targetDedominationStartedMessage.MissionTargetName + " weg");
         }
 
         private void RaiseOnMessage(TargetDominationFinishedMessage targetDominationFinishedMessage)
         {
             TargetDominationFinishedMessageReceived?.Invoke(this, targetDominationFinishedMessage);
+
+            Console.WriteLine(targetDominationFinishedMessage.DominatingTeam.Name + " hat Ziel " + targetDominationFinishedMessage.MissionTargetName + " eingenommen");
         }
 
         private void RaiseOnMessage(TargetDominationScoredMessage targetDominationScoredMessage)
         {
             TargetDominationScoredMessageReceived?.Invoke(this, targetDominationScoredMessage);
+
+            //Console.WriteLine("Team " + targetDominationScoredMessage.DominatingTeam.Name + " hat einen Punkt bekommen");
         }
 
         private void RaiseOnMessage(TargetDominationStartedMessage targetDominationStartedMessage)
         {
             TargetDominationStartedMessageReceived?.Invoke(this, targetDominationStartedMessage);
+
+            Console.WriteLine(targetDominationStartedMessage.DominatingTeam.Name + " nimmt Ziel " + targetDominationStartedMessage.MissionTargetName + " ein");
         }
 
         private void RaiseOnMessage(TeamCastChatMessage teamCastChatMessage)
