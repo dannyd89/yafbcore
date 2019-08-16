@@ -17,10 +17,10 @@ namespace YAFBCore.Mapping
         internal readonly MapSection MapSection;
         public readonly MapSectionRasterTile[] Tiles;
 
-        internal readonly MapSectionRasterConnectingTile[] TopConnectingTiles;
-        internal readonly MapSectionRasterConnectingTile[] RightConnectingTiles;
-        internal readonly MapSectionRasterConnectingTile[] BottomConnectingTiles;
-        internal readonly MapSectionRasterConnectingTile[] LeftConnectingTiles;
+        //internal readonly MapSectionRasterConnectingTile[] TopConnectingTiles;
+        //internal readonly MapSectionRasterConnectingTile[] RightConnectingTiles;
+        //internal readonly MapSectionRasterConnectingTile[] BottomConnectingTiles;
+        //internal readonly MapSectionRasterConnectingTile[] LeftConnectingTiles;
 
         internal readonly int Size;
         public readonly int TileSize;
@@ -46,10 +46,10 @@ namespace YAFBCore.Mapping
 
             Tiles = new MapSectionRasterTile[Size * Size];
 
-            TopConnectingTiles = new MapSectionRasterConnectingTile[Size];
-            RightConnectingTiles = new MapSectionRasterConnectingTile[Size];
-            BottomConnectingTiles = new MapSectionRasterConnectingTile[Size];
-            LeftConnectingTiles = new MapSectionRasterConnectingTile[Size];
+            //TopConnectingTiles = new MapSectionRasterConnectingTile[Size];
+            //RightConnectingTiles = new MapSectionRasterConnectingTile[Size];
+            //BottomConnectingTiles = new MapSectionRasterConnectingTile[Size];
+            //LeftConnectingTiles = new MapSectionRasterConnectingTile[Size];
 
             MapUnit[] stillUnits = mapSection.StillUnits;
             for (int i = 0; i < Tiles.Length; i++)
@@ -77,27 +77,27 @@ namespace YAFBCore.Mapping
                         tile.Status = MapSectionRasterTileStatus.Blocked;
                 }
 
-                if (xIndex == 0)
-                {
-                    tile.Status |= MapSectionRasterTileStatus.Connecting;
-                    LeftConnectingTiles[yIndex] = new MapSectionRasterConnectingTile(tile);
-                }
-                else if (xIndex == (Size - 1))
-                {
-                    tile.Status |= MapSectionRasterTileStatus.Connecting;
-                    RightConnectingTiles[yIndex] = new MapSectionRasterConnectingTile(tile);
-                }
+                //if (xIndex == 0)
+                //{
+                //    tile.Status |= MapSectionRasterTileStatus.Connecting;
+                //    LeftConnectingTiles[yIndex] = new MapSectionRasterConnectingTile(tile);
+                //}
+                //else if (xIndex == (Size - 1))
+                //{
+                //    tile.Status |= MapSectionRasterTileStatus.Connecting;
+                //    RightConnectingTiles[yIndex] = new MapSectionRasterConnectingTile(tile);
+                //}
 
-                if (yIndex == 0)
-                {
-                    tile.Status |= MapSectionRasterTileStatus.Connecting;
-                    TopConnectingTiles[xIndex] = new MapSectionRasterConnectingTile(tile);
-                }
-                else if (yIndex == (Size - 1))
-                {
-                    tile.Status |= MapSectionRasterTileStatus.Connecting;
-                    BottomConnectingTiles[xIndex] = new MapSectionRasterConnectingTile(tile);
-                }
+                //if (yIndex == 0)
+                //{
+                //    tile.Status |= MapSectionRasterTileStatus.Connecting;
+                //    TopConnectingTiles[xIndex] = new MapSectionRasterConnectingTile(tile);
+                //}
+                //else if (yIndex == (Size - 1))
+                //{
+                //    tile.Status |= MapSectionRasterTileStatus.Connecting;
+                //    BottomConnectingTiles[xIndex] = new MapSectionRasterConnectingTile(tile);
+                //}
 
                 Tiles[i] = tile;
             }
@@ -116,6 +116,8 @@ namespace YAFBCore.Mapping
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool intersects(MapSectionRasterTile tile, int tileSize, Vector position, float radius)
         {
+            // TODO: Change Maths to Intrinsics on net core 3.0
+
             // Find the closest point to the circle within the rectangle
             // Calculate the distance between the circle's center and this closest point
             float distanceX = position.X - MathUtil.Clamp(position.X, tile.X - tileSize / 2f, tile.X + tileSize / 2f);

@@ -209,21 +209,15 @@ namespace YAFBCore.Controllables
 
                     if (playerShipMapUnit != null)
                     {
+#if DEBUG
                         if (currentMapId != currentMap.Id)
                         {
                             Console.WriteLine("Current map id: " + currentMap.Id);
                             currentMapId = currentMap.Id;
                         }
-
+#endif
                         // Perform any shoot command if available
                         shoot();
-
-                        //try
-                        //{
-                        //    if (EfficientLoading)
-                        //        ship.LoadShields(ship.ShieldLoad.Limit * 0.7f);
-                        //}
-                        //catch { }
 
                         // Perform any move command if available
                         move();
@@ -421,11 +415,6 @@ namespace YAFBCore.Controllables
                                    shootCommand.DamageEnergy,
                                    shootCommand.SubDirections);
                         }
-
-                    //if (shootCommand != null)
-                    //{
-
-                    //}
                 }
             }
             catch (Exception ex)

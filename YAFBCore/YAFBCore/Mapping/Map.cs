@@ -427,14 +427,14 @@ namespace YAFBCore.Mapping
                         if (viewport.Contains(mapSection.StillUnits[x].PositionInternal))
                             mapUnits.Add(mapSection.StillUnits[x]);
 
-                    for (int x = 0; x < mapSection.AgingCount; x++)
-                        if (viewport.Contains(mapSection.AgingUnits[x].PositionInternal) && !mapUnits.Contains(mapSection.AgingUnits[x]))
-                        {
-                            mapUnits.Add(mapSection.AgingUnits[x]);
+                for (int x = 0; x < mapSection.AgingCount; x++)
+                    if (viewport.Contains(mapSection.AgingUnits[x].PositionInternal) && !mapUnits.Contains(mapSection.AgingUnits[x]))
+                    {
+                        mapUnits.Add(mapSection.AgingUnits[x]);
 
-                            //if (mapSection.AgingUnits[x] is PlayerShipMapUnit)
-                            //    playerCount++;
-                        }
+                        //if (mapSection.AgingUnits[x] is PlayerShipMapUnit)
+                        //    playerCount++;
+                    }
 
                 //if (i >= startIndex && i <= maxIndex)
                 //    for (int x = 0; x < mapSection.PlayerCount; x++)
@@ -597,18 +597,18 @@ namespace YAFBCore.Mapping
             int posX;
             int posY;
 
-            bool check = false;
+            bool notInsideCurrentMap = false;
             do
             {
                 posX = (int)(transformator[x] + 0.1f);
                 posY = (int)(transformator[y] + 0.1f);
 
-                check = posX < 0 || posX >= sectionCount || posY < 0 || posY >= sectionCount;
+                notInsideCurrentMap = posX < 0 || posX >= sectionCount || posY < 0 || posY >= sectionCount;
 
-                if (check)
+                if (notInsideCurrentMap)
                     enlargeMap();
 
-            } while (check);
+            } while (notInsideCurrentMap);
 
             return posX + posY * sectionCount;
         }

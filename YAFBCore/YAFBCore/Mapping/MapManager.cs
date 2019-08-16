@@ -247,15 +247,6 @@ namespace YAFBCore.Mapping
                     {
                         flowControl.PreWait();
 
-                        // Age the map because a tick has passed
-                        //lock (syncSortedMapsObj)
-                        //    foreach (KeyValuePair<string, List<Map>> kvp in universeSortedMaps)
-                        //        foreach (Map map in kvp.Value)
-                        //        {
-                        //            map.BeginLock();
-                        //            map.EndLock();
-                        //        }
-
                         // Used to signal that the manager wants to merge
                         waitMergeEvent.Reset();
 
