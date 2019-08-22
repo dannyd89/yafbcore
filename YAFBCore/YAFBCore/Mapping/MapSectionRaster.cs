@@ -17,10 +17,12 @@ namespace YAFBCore.Mapping
         internal readonly MapSection MapSection;
         public readonly MapSectionRasterTile[] Tiles;
 
+        #region Connecting tiles code
         //internal readonly MapSectionRasterConnectingTile[] TopConnectingTiles;
         //internal readonly MapSectionRasterConnectingTile[] RightConnectingTiles;
         //internal readonly MapSectionRasterConnectingTile[] BottomConnectingTiles;
         //internal readonly MapSectionRasterConnectingTile[] LeftConnectingTiles;
+        #endregion
 
         internal readonly int Size;
         public readonly int TileSize;
@@ -46,10 +48,12 @@ namespace YAFBCore.Mapping
 
             Tiles = new MapSectionRasterTile[Size * Size];
 
+            #region Connecting tiles code
             //TopConnectingTiles = new MapSectionRasterConnectingTile[Size];
             //RightConnectingTiles = new MapSectionRasterConnectingTile[Size];
             //BottomConnectingTiles = new MapSectionRasterConnectingTile[Size];
             //LeftConnectingTiles = new MapSectionRasterConnectingTile[Size];
+            #endregion
 
             MapUnit[] stillUnits = mapSection.StillUnits;
             for (int i = 0; i < Tiles.Length; i++)
@@ -77,6 +81,9 @@ namespace YAFBCore.Mapping
                         tile.Status = MapSectionRasterTileStatus.Blocked;
                 }
 
+                Tiles[i] = tile;
+
+                #region Connecting tiles code
                 //if (xIndex == 0)
                 //{
                 //    tile.Status |= MapSectionRasterTileStatus.Connecting;
@@ -98,8 +105,7 @@ namespace YAFBCore.Mapping
                 //    tile.Status |= MapSectionRasterTileStatus.Connecting;
                 //    BottomConnectingTiles[xIndex] = new MapSectionRasterConnectingTile(tile);
                 //}
-
-                Tiles[i] = tile;
+                #endregion
             }
 
             //Console.WriteLine("Raster time: " + sw.Elapsed);

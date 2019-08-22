@@ -84,11 +84,12 @@ namespace YAFBCore.Pathfinding.Pathfinders
                 for (int i = 0; i < mapSections.Length; i++)
                     tasks[i] = mapSections[i].GetRaster(TileSize);
 
-                Task.WaitAll(tasks);
+                //Task.WaitAll(tasks);
                 
                 for (int i = 0; i < rasters.Length; i++)
-                    rasters[i] = tasks[i].Result;
+                    rasters[i] = tasks[i].GetAwaiter().GetResult();
 
+                #region Connecting tiles code
                 // Connect all connecting tiles with each other
                 //for (int i = 0; i < rasters.Length; i++)
                 //{
@@ -138,6 +139,7 @@ namespace YAFBCore.Pathfinding.Pathfinders
                 //        }
                 //    }
                 //}
+                #endregion
 
                 currentSectionCount = sectionCount;
 
